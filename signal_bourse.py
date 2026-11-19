@@ -886,6 +886,7 @@ def cmd_site():
     resultats, pepites, erreurs = tout_analyser(cfg, silencieux=False)
     chemin = ecrire_page(resultats, pepites, erreurs, dossier=DOSSIER / "docs")
     (DOSSIER / "docs" / ".nojekyll").write_text("", encoding="utf-8")
+    enregistrer_historique(resultats + pepites)
     precedent = json.loads(ETAT.read_text(encoding="utf-8")) if ETAT.exists() else {}
     _verifier_changements(cfg, resultats, precedent)
     import os
