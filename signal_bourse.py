@@ -21,6 +21,7 @@ Aucun signal n'est garanti. Les performances passées ne préjugent pas des perf
 """
 
 import json
+import os
 import math
 import re
 import sys
@@ -477,7 +478,7 @@ def analyser(entree, cfg, avec_news=True):
     tech_lt = float(score_technique_lt(d).fillna(0).iloc[-1])
     info = infos_fondamentales(ticker)
     fond, raisons_f = score_fondamental(info, type_titre)
-    news = actualites(ticker, nom) if avec_news else []
+    news = actualites(ticker, entree.get("recherche") or nom) if avec_news else []
     an = analyser_actualites(news)
     dirig = analyser_dirigeants(transactions_dirigeants(ticker)) if type_titre == "Action" else {"score": 0, "texte": "—"}
 
@@ -507,6 +508,8 @@ def analyser(entree, cfg, avec_news=True):
 
     return {
         "ticker": ticker, "nom": nom, "type": type_titre, "prix": prix, "theme": entree.get("theme", ""),
+        "pays": entree.get("pays", ""), "zone": entree.get("zone", ""), "secteur": entree.get("secteur", "") or info.get("sector", ""),
+        "recherche": entree.get("recherche", ""),
         "score_pepite": round(pep, 3), "raisons_pepite": raisons_pep,
         "capitalisation": info.get("marketCap"),
         "devise": info.get("currency", ""), "date": str(d.index[-1].date()),
@@ -567,7 +570,7 @@ def _carte_ligne(r):
     <div><div class="petit">Court terme</div>{_badge(r['signal_ct'])}</div>
     <div><div class="petit">Long terme</div>{_badge(r['signal_lt'])}</div>
   </div>
-  <div class="petit">Stop {r['stop']:.2f} · Objectif {r['objectif']:.2f} · Quantité max {r['quantite']} · Risque {niveau_risque(r['vol_annuelle'])}</div>
+  <div class="petit">Stop {r['stop']:.4g} · Objectif {r['objectif']:.4g}{'' if r['type'] in ('Forex', 'Matières premières') else f" · Quantité max {r['quantite']}"} · Risque {niveau_risque(r['vol_annuelle'])}</div>
   <details><summary>Pourquoi ?</summary>
     <h4>Technique</h4><ul>{''.join(f'<li>{html.escape(x)}</li>' for x in r['raisons_tech'])}</ul>
     <h4>Fondamentaux</h4><ul>{''.join(f'<li>{html.escape(x)}</li>' for x in r['raisons_fond'])}</ul>
@@ -578,30 +581,65 @@ def _carte_ligne(r):
 </div>"""
 
 
-def _carte_pepite(r, rang):
+def _carte_pepite(r, rang, titre_details="Pourquoi c'est une pépite ?"):
     etoiles = "★" * max(1, min(5, int(round((r['score_pepite'] + 1) * 2.5))))
+    badges = ""
+    if r.get("nouveau"):
+        badges += '<span class="tag nouveau">🆕 Nouveau</span>'
+    if r.get("fonds_acheteurs"):
+        badges += f'<span class="tag fonds" title="Ouvert ou renforcé au dernier trimestre">🏦 Acheté par {html.escape(", ".join(r["fonds_acheteurs"][:2]))}</span>'
+    lieu = " · ".join(x for x in (r.get("pays"), r.get("secteur") or r.get("theme")) if x) or r['type']
+    cap = r.get("cap_usd")
+    cap_txt = f" · capitalisation {cap / 1e9:,.0f} Md$".replace(",", " ") if cap else ""
     return f"""
-<div class="carte" data-type="{html.escape(r['type'])}">
+<div class="carte" data-type="{html.escape(r['type'])}" data-zone="{html.escape(r.get('zone', ''))}">
   <div class="haut">
-    <div><div class="nom">#{rang} {html.escape(r['nom'])}</div><div class="petit">{html.escape(r['ticker'])} · {html.escape(r['theme'] or r['type'])}</div></div>
+    <div><div class="nom">#{rang} {html.escape(r['nom'])}</div><div class="petit">{html.escape(r['ticker'])} · {html.escape(lieu)}</div></div>
     <div class="prix">{r['prix']:.2f} <small>{html.escape(r['devise'])}</small><br>{_spark_svg(r['spark'])}</div>
   </div>
-  <div class="pep"><span class="etoiles">{etoiles}</span> score pépite {r['score_pepite']:+.2f} · risque <b>{niveau_risque(r['vol_annuelle'])}</b></div>
+  {('<div>' + badges + '</div>') if badges else ''}
+  <div class="pep"><span class="etoiles">{etoiles}</span> score croissance {r['score_pepite']:+.2f} · risque <b>{niveau_risque(r['vol_annuelle'])}</b></div>
   <div class="petit">{_perf(r)}</div>
   <div class="signaux">
     <div><div class="petit">Court terme</div>{_badge(r['signal_ct'])}</div>
     <div><div class="petit">Long terme</div>{_badge(r['signal_lt'])}</div>
   </div>
-  <details><summary>Pourquoi c'est une pépite ?</summary>
+  <details><summary>{html.escape(titre_details)}</summary>
     <ul>{''.join(f'<li>{html.escape(x)}</li>' for x in r['raisons_pepite'])}</ul>
+    <h4>Bilan et valorisation</h4><ul>{''.join(f'<li>{html.escape(x)}</li>' for x in r['raisons_fond'])}</ul>
     <p><b>Actualités</b><br>{_liens(r['news_pos'] + r['news_neg'])}</p>
-    <p class="petit">Pire baisse sur 1 an : {r['max_dd_1an']:.0%} · volatilité {r['vol_annuelle']:.0%} par an</p>
+    <p><b>Dirigeants et décisions</b><br>{html.escape(r['dirigeants']['texte'])}<br>{_liens(r['news_dirig'])}</p>
+    <p class="petit">Pire baisse sur 1 an : {r['max_dd_1an']:.0%} · volatilité {r['vol_annuelle']:.0%} par an{cap_txt}</p>
   </details>
 </div>"""
 
 
-def page_html(resultats, pepites, erreurs, auto_refresh_min=None):
+def _section_fonds(fonds):
+    if not fonds or not fonds.get("fonds"):
+        return "<p class='petit'>Données des grands fonds indisponibles pour le moment.</p>"
+    cartes = []
+    for f in fonds["fonds"]:
+        def liste(items, fmt):
+            return "<ul>" + "".join(f"<li>{fmt(i)}</li>" for i in items) + "</ul>" if items else "<p class='petit'>—</p>"
+        cartes.append(f"""
+<div class="carte">
+  <div class="nom">{html.escape(f['nom'])}</div>
+  <div class="petit">Positions au {html.escape(f['trimestre'])} · publiées le {html.escape(f['publie'])}</div>
+  <details open><summary>🆕 Nouvelles positions</summary>{liste(f['nouveaux'], lambda i: f"{html.escape(i['nom'])} <span class='petit'>({i['poids']:.1%} du fonds)</span>")}</details>
+  <details><summary>⬆️ Renforcées</summary>{liste(f['renforces'], lambda i: f"{html.escape(i['nom'])} <b class='up'>{i['var']:+.0%}</b>")}</details>
+  <details><summary>⬇️ Allégées</summary>{liste(f['alleges'], lambda i: f"{html.escape(i['nom'])} <b class='down'>{i['var']:+.0%}</b>")}</details>
+  <details><summary>❌ Vendues entièrement</summary>{liste(f['vendus'], lambda i: html.escape(i['nom']))}</details>
+  <details><summary>🏆 10 plus grosses positions</summary>{liste(f['top'], lambda i: f"{html.escape(i['nom'])} <span class='petit'>{i['poids']:.1%}</span>")}</details>
+</div>""")
+    return "".join(cartes)
+
+
+def page_html(resultats, pepites, erreurs, auto_refresh_min=None, extra=None):
     cfg = charger_config()
+    extra = extra or {}
+    opps, etfs_m, marches, fonds = extra.get("opportunites", []), extra.get("etfs", []), extra.get("marches", []), extra.get("fonds")
+    nb_pays = len({r.get("pays") for r in opps if r.get("pays")})
+    nb_nouveaux = sum(1 for r in opps + pepites if r.get("nouveau"))
     maintenant = dt.datetime.now().strftime("%d/%m/%Y à %H:%M")
     tri = sorted(resultats, key=lambda x: -(x["score_ct"] + x["score_lt"]))
     nb_achat = sum(1 for r in resultats if r["score_lt"] >= 0.18)
@@ -634,17 +672,24 @@ details p{{font-size:13px}} a{{color:var(--accent);text-decoration:none}}
 .avert{{background:#fff4e5;color:#5a3b00;padding:10px 12px;border-radius:10px;font-size:13px;margin:10px 0}}
 @media (prefers-color-scheme: dark){{.avert{{background:#3a2c10;color:#ffdca3}}}}
 .panneau{{display:none}} .panneau.actif{{display:block}}
+.tag{{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;margin-right:4px;font-weight:600}}
+.nouveau{{background:#e8f0fe;color:#0b57d0}} .fonds{{background:#fdf1dc;color:#8a5a00}}
+@media (prefers-color-scheme: dark){{.nouveau{{background:#1d2a44;color:#9cc0ff}} .fonds{{background:#3a2c10;color:#ffd38a}}}}
+h3{{margin:18px 0 8px;font-size:17px}}
 .methode{{background:var(--carte);border:1px solid var(--bord);border-radius:12px;padding:14px;font-size:14px;line-height:1.5}}
 </style></head><body>
 <header>
   <h1>📈 SignalBourse</h1>
-  <p class="resume">Mis à jour le {maintenant} · {len(resultats)} lignes suivies : <b>{nb_achat}</b> à acheter ou renforcer à long terme, <b>{nb_prudence}</b> à surveiller de près à court terme. Pépite n°1 du jour : <b>{html.escape(top_pep)}</b>.</p>
+  <p class="resume">Mis à jour le {maintenant} · {len(resultats)} lignes suivies : <b>{nb_achat}</b> à acheter ou renforcer à long terme, <b>{nb_prudence}</b> à surveiller de près à court terme. Pépite n°1 du jour : <b>{html.escape(top_pep)}</b>.{f" Opportunités monde : <b>{len(opps)}</b> titres de {nb_pays} pays" + (f", dont <b>{nb_nouveaux}</b> nouveaux" if nb_nouveaux else "") + "." if opps else ""}</p>
 </header>
 <main>
   <div class="avert">Outil d'aide à la décision, <b>pas un conseil en investissement</b>. Aucun signal n'est garanti : tu peux perdre tout ou partie de ton capital. Les « pépites » sont plus risquées que les grandes valeurs ; limite chacune à 1–2 % de ton capital. Données Yahoo Finance (jusqu'à 15 min de retard).</div>
   <nav class="onglets">
     <button class="actif" data-onglet="liste">Ma liste</button>
+    {'<button data-onglet="monde">🌍 Opportunités monde</button>' if opps or etfs_m else ''}
     <button data-onglet="pepites">💎 Pépites</button>
+    {'<button data-onglet="marches">🛢️ Matières & Forex</button>' if marches else ''}
+    {'<button data-onglet="fonds">🏦 Grands fonds</button>' if fonds else ''}
     <button data-onglet="methode">Méthode</button>
   </nav>
 
@@ -655,8 +700,30 @@ details p{{font-size:13px}} a{{color:var(--accent);text-decoration:none}}
     <div class="grille" id="g-liste">{''.join(_carte_ligne(r) for r in tri)}</div>
   </section>
 
+  <section class="panneau" id="monde">
+    <p class="petit">Liste renouvelée automatiquement chaque jour : balayage des moyennes et grandes capitalisations de {len(__import__('monde').REGIONS)} pays (dont l'Afrique du Sud et l'Égypte), filtrées sur la croissance du chiffre d'affaires, puis classées selon la tendance, le bilan, la valorisation, l'avis des analystes et les achats des grands fonds. Le badge 🆕 signale une entrée dans la liste depuis moins de 7 jours.</p>
+    <div class="filtres" data-cible="g-monde">
+      <button class="actif" data-f="tout">Tout</button><button data-attr="zone" data-f="Amériques">Amériques</button><button data-attr="zone" data-f="Europe">Europe</button><button data-attr="zone" data-f="Asie-Pacifique">Asie-Pacifique</button><button data-attr="zone" data-f="Afrique &amp; Moyen-Orient">Afrique &amp; Moyen-Orient</button>
+    </div>
+    <div class="grille" id="g-monde">{''.join(_carte_pepite(r, i + 1, "Pourquoi cette opportunité ?") for i, r in enumerate(opps))}</div>
+    {('<h3>📊 ETF les plus dynamiques du monde</h3><p class="petit">ETF de plus d’1 milliard d’encours, sans effet de levier. La plupart sont cotés aux États-Unis : ils ne sont pas éligibles au PEA, il faut un compte-titres.</p><div class="grille">' + ''.join(_carte_pepite(r, i + 1, "Pourquoi cet ETF ?") for i, r in enumerate(etfs_m)) + '</div>') if etfs_m else ''}
+  </section>
+
+  <section class="panneau" id="marches">
+    <p class="petit">Signaux sur les matières premières (contrats à terme) et les devises. Ces marchés sont très volatils et souvent traités avec effet de levier : prudence.</p>
+    <div class="filtres" data-cible="g-marches">
+      <button class="actif" data-f="tout">Tout</button><button data-f="Matières premières">Matières premières</button><button data-f="Forex">Forex</button>
+    </div>
+    <div class="grille" id="g-marches">{''.join(_carte_ligne(r) for r in sorted(marches, key=lambda x: -(x["score_ct"] + x["score_lt"])))}</div>
+  </section>
+
+  <section class="panneau" id="fonds">
+    <p class="petit">Ce que les plus grands investisseurs ont acheté et vendu au dernier trimestre, d'après leurs déclarations officielles à l'autorité boursière américaine (formulaire 13F). Ces positions sont publiées avec environ 45 jours de retard.</p>
+    <div class="grille">{_section_fonds(fonds)}</div>
+  </section>
+
   <section class="panneau" id="pepites">
-    <p class="petit">Classement des {len(pepites)} meilleures pépites parmi {len(cfg.get('pepites', []))} petites et moyennes valeurs et ETF thématiques : forte croissance, cours qui monte, qualité et potentiel selon les analystes.</p>
+    <p class="petit">Les {len(pepites)} meilleures pépites : petites et moyennes valeurs (dont celles détectées automatiquement dans le monde entier) et ETF thématiques. Elles combinent une forte croissance, un cours qui monte, une bonne qualité et du potentiel selon les analystes.</p>
     <div class="filtres" data-cible="g-pep">
       <button class="actif" data-f="tout">Tout</button><button data-f="Action">Actions</button><button data-f="ETF">ETF</button>
     </div>
@@ -666,7 +733,8 @@ details p{{font-size:13px}} a{{color:var(--accent);text-decoration:none}}
   <section class="panneau" id="methode"><div class="methode">
     <p><b>Court terme</b> (jours / semaines) : 70 % technique (moyennes 20/50 j, RSI, MACD, Bollinger, momentum), 25 % actualités des 14 derniers jours, 5 % achats et ventes des dirigeants.</p>
     <p><b>Long terme</b> (mois / années) : pour les actions, 40 % fondamentaux (PER, PEG, croissance, marges, dette, trésorerie, avis des analystes), 35 % tendance de fond (moyenne 200 j, momentum 12 mois), 15 % actualités, 10 % dirigeants. Pour les ETF et les obligations : 80 % tendance, 20 % actualités.</p>
-    <p><b>Score pépite</b> : dynamique du cours sur 6 et 12 mois, tendance de fond, distance au plus haut, croissance du chiffre d'affaires et des bénéfices, rentabilité, potentiel selon les analystes, PEG, taille de l'entreprise.</p>
+    <p><b>Opportunités monde</b> : chaque jour, l'appli interroge le filtre de Yahoo Finance pour {len(__import__('monde').REGIONS)} pays (capitalisation d'environ 2 milliards de dollars ou plus, croissance du chiffre d'affaires supérieure à 5 %). Elle garde les 90 meilleurs sur la tendance, puis les analyse en détail (bilan, valorisation, analystes, actualités, dirigeants). Elle ajoute un bonus quand un grand fonds vient d'acheter le titre.</p>
+    <p><b>Score croissance / pépite</b> : dynamique du cours sur 6 et 12 mois, tendance de fond, distance au plus haut, croissance du chiffre d'affaires et des bénéfices, rentabilité, potentiel selon les analystes, PEG, taille de l'entreprise.</p>
     <p><b>Gestion du risque</b> : stop = cours − 2 × ATR ; objectif = cours + 3 × ATR ; la quantité max limite la perte à {cfg['risque_par_trade_pct']} % du capital si le stop est touché.</p>
     <p><b>Conformité</b> : vérifie la politique de ton employeur sur les transactions personnelles, et n'utilise jamais une information non publique sur un client.</p>
     {'<p><b>Titres non trouvés</b> (vérifie le ticker sur finance.yahoo.com) :</p><ul>' + err + '</ul>' if erreurs else ''}
@@ -682,17 +750,22 @@ if (location.hash) {{ const b = document.querySelector(`.onglets button[data-ong
 document.querySelectorAll('.filtres').forEach(f => f.querySelectorAll('button').forEach(b => b.onclick = () => {{
   f.querySelectorAll('button').forEach(x => x.classList.toggle('actif', x === b));
   document.querySelectorAll('#' + f.dataset.cible + ' .carte').forEach(c => {{
-    c.style.display = (b.dataset.f === 'tout' || c.dataset.type === b.dataset.f) ? '' : 'none';
+    const attr = b.dataset.attr || 'type';
+    c.style.display = (b.dataset.f === 'tout' || c.dataset[attr] === b.dataset.f) ? '' : 'none';
   }});
 }}));
 </script>
 </body></html>"""
 
 
-def ecrire_page(resultats, pepites, erreurs, dossier=None, auto_refresh_min=None):
+def ecrire_page(resultats, pepites, erreurs, dossier=None, auto_refresh_min=None, extra=None):
     dossier = Path(dossier) if dossier else SORTIE
     dossier.mkdir(parents=True, exist_ok=True)
-    page = page_html(resultats, pepites, erreurs, auto_refresh_min)
+    page = page_html(resultats, pepites, erreurs, auto_refresh_min, extra)
+    mdp = os.environ.get("SITE_PASSWORD")
+    if mdp and dossier != SORTIE:
+        import monde
+        page = monde.chiffrer_page(page, mdp)
     chemin = dossier / "index.html"
     chemin.write_text(page, encoding="utf-8")
     if dossier == SORTIE:
@@ -889,21 +962,121 @@ def cmd_app(port=8765):
         print("Arrêt.")
 
 
+SELECTION = DOSSIER / "selection.json"
+_CHAMPS_ENTREE = ("ticker", "nom", "type", "theme", "pays", "zone", "secteur", "recherche")
+
+
+def _ajouter_news(liste):
+    for r in liste:
+        try:
+            an = analyser_actualites(actualites(r["ticker"], r.get("recherche") or r["nom"]))
+            r.update({"news_pos": an["positives"], "news_neg": an["negatives"], "news_dirig": an["dirigeants"],
+                      "nb_news": an["nb"], "sentiment": round(an["score"], 3)})
+            # le sentiment des actualités ajuste légèrement les scores
+            r["score_ct"] = round(r["score_ct"] + 0.25 * an["score"], 3)
+            r["signal_ct"] = libelle(r["score_ct"])
+        except Exception:
+            pass
+
+
+def construire_monde(cfg, erreurs):
+    """Opportunités monde (large caps), pépites (mid caps + liste perso), ETF mondiaux, matières & forex, grands fonds."""
+    import monde
+    aujourd_hui = dt.date.today().isoformat()
+    univers = monde.univers_du_jour()
+    fonds = monde.grands_fonds()
+    sel = {}
+    if SELECTION.exists():
+        try:
+            sel = json.loads(SELECTION.read_text(encoding="utf-8"))
+        except Exception:
+            sel = {}
+    complet = sel.get("date") != aujourd_hui or not sel.get("opportunites")
+    if complet:
+        cand_actions = univers.get("actions", [])[:60]
+        cand_etfs = univers.get("etfs", [])
+        cand_pep = cfg.get("pepites", [])
+    else:
+        cand_actions = sel.get("opportunites", []) + sel.get("pepites_auto", [])
+        cand_etfs = sel.get("etfs", [])
+        cand_pep = cfg.get("pepites", [])
+    print(f"Mode {'complet (renouvellement de la liste)' if complet else 'rapide (mise à jour des cours)'} : "
+          f"{len(cand_actions)} actions monde, {len(cand_etfs)} ETF, {len(cand_pep)} pépites perso", flush=True)
+
+    res_actions, err = analyser_liste(cand_actions, cfg, avec_news=False, silencieux=True)
+    erreurs += [e for e in err if not complet]  # en mode complet, on tait les tickers exotiques introuvables
+    grandes, moyennes = [], []
+    for r in res_actions:
+        r["cap_usd"] = monde.en_dollars(r.get("capitalisation"), r.get("devise"))
+        r["nouveau"] = monde.est_nouveau(univers, r["ticker"])
+        r["fonds_acheteurs"] = monde.fonds_qui_achetent(r["nom"], fonds)
+        bonus = 0.08 * min(len(r["fonds_acheteurs"]), 2)
+        r["score_global"] = 0.45 * r["score_lt"] + 0.45 * r["score_pepite"] + 0.10 * r["score_ct"] + bonus
+        if r["fonds_acheteurs"]:
+            r["raisons_pepite"] = r["raisons_pepite"] + [f"Acheté ou renforcé au dernier trimestre par : {', '.join(r['fonds_acheteurs'])}"]
+        (moyennes if (r["cap_usd"] or 0) and r["cap_usd"] < 10e9 else grandes).append(r)
+    grandes.sort(key=lambda r: -r["score_global"])
+    moyennes.sort(key=lambda r: -r["score_global"])
+    opportunites = [r for r in grandes if r["score_lt"] > -0.1][:24]
+    pep_auto = [r for r in moyennes if r["score_lt"] > -0.1][:10]
+
+    res_pep, err = analyser_liste(cand_pep, cfg, avec_news=False, silencieux=True)
+    erreurs += err
+    for r in res_pep:
+        r["fonds_acheteurs"] = monde.fonds_qui_achetent(r["nom"], fonds)
+    vus, pepites = set(), []
+    for r in sorted(res_pep + pep_auto, key=lambda r: -r["score_pepite"]):
+        if r["ticker"] not in vus:
+            vus.add(r["ticker"])
+            pepites.append(r)
+    pepites = pepites[:16]
+
+    res_etf, err = analyser_liste(cand_etfs, cfg, avec_news=False, silencieux=True)
+    for r in res_etf:
+        r["nouveau"] = monde.est_nouveau(univers, r["ticker"])
+    etfs = sorted(res_etf, key=lambda r: -(r["score_lt"] + r["score_pepite"]))[:12]
+
+    marches, err = analyser_liste(monde.MATIERES + monde.FOREX, cfg, avec_news=True, silencieux=True)
+    erreurs += err
+
+    _ajouter_news(opportunites + pepites + etfs)
+
+    if complet:
+        garder = lambda lst: [{k: r.get(k, "") for k in _CHAMPS_ENTREE} for r in lst]
+        SELECTION.write_text(json.dumps({"date": aujourd_hui, "opportunites": garder(opportunites),
+                                         "pepites_auto": garder(pep_auto), "etfs": garder(etfs)},
+                                        ensure_ascii=False, indent=1), encoding="utf-8")
+    return {"opportunites": opportunites, "pepites": pepites, "etfs": etfs, "marches": marches,
+            "fonds": fonds, "complet": complet}
+
+
 def cmd_site():
     """Génère le site dans le dossier docs/ (utilisé par GitHub Pages pour la version en ligne 24h/24)."""
     cfg = charger_config()
-    resultats, pepites, erreurs = tout_analyser(cfg, silencieux=False)
-    chemin = ecrire_page(resultats, pepites, erreurs, dossier=DOSSIER / "docs")
+    resultats, erreurs = analyser_liste(cfg["watchlist"], cfg, avec_news=True)
+    try:
+        extra = construire_monde(cfg, erreurs)
+    except Exception as ex:  # le module monde ne doit jamais bloquer le reste
+        print(f"Module monde indisponible : {ex}", flush=True)
+        pep, err = trouver_pepites(cfg, silencieux=True)
+        erreurs += err
+        extra = {"pepites": pep, "complet": False}
+    pepites = extra.get("pepites", [])
+    chemin = ecrire_page(resultats, pepites, erreurs, dossier=DOSSIER / "docs", extra=extra)
     (DOSSIER / "docs" / ".nojekyll").write_text("", encoding="utf-8")
-    enregistrer_historique(resultats + pepites)
+    tous = resultats + pepites + extra.get("opportunites", []) + extra.get("etfs", []) + extra.get("marches", [])
+    if extra.get("complet") or not HISTO.exists():
+        enregistrer_historique(tous)  # une photo complète par jour suffit pour le suivi long terme
     precedent = json.loads(ETAT.read_text(encoding="utf-8")) if ETAT.exists() else {}
-    _verifier_changements(cfg, resultats, precedent)
-    import os
-    if (os.environ.get("TELEGRAM_BOT_TOKEN") or cfg["alertes"].get("telegram_bot_token")) and pepites:
-        top = ", ".join(r["nom"] for r in pepites[:3])
-        achats = [r["nom"] for r in resultats if r["score_lt"] >= 0.45]
-        envoyer_alerte(cfg, f"SignalBourse mis à jour. Pépites du jour : {top}."
-                            + (f" Achat fort LT : {', '.join(achats)}." if achats else ""))
+    _verifier_changements(cfg, resultats + extra.get("marches", []), precedent)
+    if extra.get("complet") and (os.environ.get("TELEGRAM_BOT_TOKEN") or cfg["alertes"].get("telegram_bot_token")):
+        top = ", ".join(r["nom"] for r in (extra.get("opportunites") or [])[:3])
+        pep = ", ".join(r["nom"] for r in pepites[:3])
+        envoyer_alerte(cfg, f"📈 SignalBourse : liste du jour renouvelée.\nOpportunités monde : {top}\nPépites : {pep}")
+    quelle = os.environ.get("NEWSLETTER", "").strip().lower()
+    if quelle in ("lundi", "bilan"):
+        import newsletter
+        newsletter.envoyer(quelle, resultats, extra)
     print(f"Site généré : {chemin}")
 
 
@@ -999,6 +1172,9 @@ def main(argv):
     elif c == "pepites":
         cmd_pepites()
     elif c == "site":
+        cmd_site()
+    elif c == "newsletter" and args:
+        os.environ["NEWSLETTER"] = args[0]
         cmd_site()
     elif c == "idees":
         cmd_idees()
