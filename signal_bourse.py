@@ -1097,7 +1097,7 @@ def construire_monde(cfg, erreurs):
             sel = json.loads(SELECTION.read_text(encoding="utf-8"))
         except Exception:
             sel = {}
-    complet = sel.get("date") != aujourd_hui or not sel.get("opportunites")
+    complet = sel.get("date") != aujourd_hui or not sel.get("opportunites") or "cryptos" not in sel
     if complet:
         cand_actions = univers.get("actions", [])[:90]
         cand_etfs = univers.get("etfs", [])
@@ -1380,6 +1380,15 @@ def cmd_site():
                 print(f"Icône : {ex}", flush=True)
     (sortie / ".nojekyll").write_text("", encoding="utf-8")
     print(f"Site généré : {sortie / 'index.html'} + {len(tous)} fiches", flush=True)
+    resume = lambda lst, n=6: " | ".join(f"{r['nom'][:22]} ({r['signal_lt']}, pot {r['score_pepite']:+.2f})" for r in lst[:n])
+    print("[résumé] opportunités :", len(data["opportunites"]), resume(data["opportunites"]), flush=True)
+    print("[résumé] pépites :", len(pepites), resume(pepites), flush=True)
+    print("[résumé] cryptos :", len(data["cryptos"]), resume(data["cryptos"], 8), flush=True)
+    print("[résumé] afrique :", len(afrique["actions"]), resume(afrique["actions"]), "| BRVM :",
+          "; ".join(f"{t['symbole']} {t['cours']} {t['variation_jour']:+.2%}" for t in b.get("titres", [])[:5]), flush=True)
+    print("[résumé] calendrier :", len(cal), "; ".join(f"{e['date']} {e['texte'][:40]}" for e in cal[:5]), flush=True)
+    print("[résumé] fonds :", len((extra.get("fonds") or {}).get("fonds", [])), "| portefeuille :", "oui" if pf else "non",
+          "| bulletin :", bul.get("jours"), "jours | simulation :", len(simu), "| alertes :", len(alertes), flush=True)
 
     if complet and (os.environ.get("TELEGRAM_BOT_TOKEN") or cfg["alertes"].get("telegram_bot_token")):
         top = ", ".join(r["nom"] for r in (extra.get("opportunites") or [])[:3])
