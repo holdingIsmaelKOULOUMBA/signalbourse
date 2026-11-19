@@ -509,7 +509,7 @@ def analyser(entree, cfg, avec_news=True):
     return {
         "ticker": ticker, "nom": nom, "type": type_titre, "prix": prix, "theme": entree.get("theme", ""),
         "pays": entree.get("pays", ""), "zone": entree.get("zone", ""), "secteur": entree.get("secteur", "") or info.get("sector", ""),
-        "recherche": entree.get("recherche", ""),
+        "recherche": entree.get("recherche", ""), "code_pays": entree.get("code_pays", ""), "pays_siege": info.get("country", ""),
         "score_pepite": round(pep, 3), "raisons_pepite": raisons_pep,
         "capitalisation": info.get("marketCap"),
         "devise": info.get("currency", ""), "date": str(d.index[-1].date()),
@@ -963,7 +963,7 @@ def cmd_app(port=8765):
 
 
 SELECTION = DOSSIER / "selection.json"
-_CHAMPS_ENTREE = ("ticker", "nom", "type", "theme", "pays", "zone", "secteur", "recherche")
+_CHAMPS_ENTREE = ("ticker", "nom", "type", "theme", "pays", "zone", "secteur", "recherche", "code_pays")
 
 
 def _ajouter_news(liste):
@@ -993,7 +993,7 @@ def construire_monde(cfg, erreurs):
             sel = {}
     complet = sel.get("date") != aujourd_hui or not sel.get("opportunites")
     if complet:
-        cand_actions = univers.get("actions", [])[:60]
+        cand_actions = univers.get("actions", [])[:90]
         cand_etfs = univers.get("etfs", [])
         cand_pep = cfg.get("pepites", [])
     else:
@@ -1005,8 +1005,20 @@ def construire_monde(cfg, erreurs):
 
     res_actions, err = analyser_liste(cand_actions, cfg, avec_news=False, silencieux=True)
     erreurs += [e for e in err if not complet]  # en mode complet, on tait les tickers exotiques introuvables
+    # on écarte les cotations secondaires (ex. Apple coté à Varsovie) et les doublons de catégories d'actions
+    filtres, vus = [], set()
+    for r in sorted(res_actions, key=lambda r: -(r["score_lt"] + r["score_pepite"])):
+        attendu = monde.PAYS_YAHOO.get(r.get("code_pays", ""))
+        siege = r.get("pays_siege")
+        if attendu and siege and siege not in monde.TOLERANCE_SIEGE.get(attendu, {attendu}):
+            continue
+        cle = monde._norm(r["nom"])
+        if cle in vus:
+            continue
+        vus.add(cle)
+        filtres.append(r)
     grandes, moyennes = [], []
-    for r in res_actions:
+    for r in filtres:
         r["cap_usd"] = monde.en_dollars(r.get("capitalisation"), r.get("devise"))
         r["nouveau"] = monde.est_nouveau(univers, r["ticker"])
         r["fonds_acheteurs"] = monde.fonds_qui_achetent(r["nom"], fonds)
@@ -1017,7 +1029,7 @@ def construire_monde(cfg, erreurs):
         (moyennes if (r["cap_usd"] or 0) and r["cap_usd"] < 10e9 else grandes).append(r)
     grandes.sort(key=lambda r: -r["score_global"])
     moyennes.sort(key=lambda r: -r["score_global"])
-    opportunites = [r for r in grandes if r["score_lt"] > -0.1][:24]
+    opportunites = [r for r in grandes if r["score_lt"] > -0.1][:30]
     pep_auto = [r for r in moyennes if r["score_lt"] > -0.1][:10]
 
     res_pep, err = analyser_liste(cand_pep, cfg, avec_news=False, silencieux=True)

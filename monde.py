@@ -16,6 +16,7 @@ import json
 import os
 import re
 import time
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -50,6 +51,18 @@ REGIONS = {
     "sa": ("Arabie saoudite", "Afrique & Moyen-Orient", 7.5e9), "ae": ("Émirats arabes unis", "Afrique & Moyen-Orient", 7.3e9),
     "il": ("Israël", "Afrique & Moyen-Orient", 7e9),
 }
+
+PAYS_YAHOO = {
+    "us": "United States", "ca": "Canada", "br": "Brazil", "mx": "Mexico", "fr": "France", "de": "Germany",
+    "nl": "Netherlands", "it": "Italy", "es": "Spain", "be": "Belgium", "ch": "Switzerland", "gb": "United Kingdom",
+    "se": "Sweden", "dk": "Denmark", "no": "Norway", "fi": "Finland", "pl": "Poland", "jp": "Japan", "kr": "South Korea",
+    "tw": "Taiwan", "hk": "Hong Kong", "in": "India", "sg": "Singapore", "au": "Australia", "id": "Indonesia",
+    "za": "South Africa", "eg": "Egypt", "sa": "Saudi Arabia", "ae": "United Arab Emirates", "il": "Israel",
+}
+# Pays dont le siège est accepté même s'il diffère du pays de cotation (sociétés cotées hors de leur pays d'origine)
+TOLERANCE_SIEGE = {"Hong Kong": {"China", "Hong Kong", "Macau"}, "Netherlands": {"Netherlands", "Luxembourg"},
+                   "United Kingdom": {"United Kingdom", "Jersey", "Guernsey", "Isle of Man", "Ireland"},
+                   "Norway": {"Norway", "Bermuda", "Marshall Islands", "Cyprus"}, "Singapore": {"Singapore"}}
 
 MATIERES = [
     {"ticker": "GC=F", "nom": "Or", "type": "Matières premières", "recherche": "gold price"},
@@ -94,8 +107,10 @@ FONDS = {
     "Fundsmith (Terry Smith)": "0001569205",
     "Baillie Gifford": "0001088875",
 }
-UA_SEC = {"User-Agent": "SignalBourse personal research holdingismael@users.noreply.github.com",
-          "Accept-Encoding": "identity"}
+UA_SEC_LISTE = [
+    os.environ.get("SEC_USER_AGENT") or "Ismael Kouloumba holdingismael@users.noreply.github.com",
+    "SignalBourse/1.0 (personal research; holdingismael@users.noreply.github.com)",
+]
 
 
 def log(msg):
@@ -134,24 +149,28 @@ def en_dollars(montant, devise):
 # Balayage mondial
 # ----------------------------------------------------------------------------
 
-def _requete_region(code, seuil, taille=60):
-    filtres = [
-        EquityQuery("eq", ["region", code]),
-        EquityQuery("gte", ["intradaymarketcap", seuil]),
-        EquityQuery("gt", ["totalrevenues1yrgrowth.lasttwelvemonths", 5]),
-    ]
+def _screen(filtres, taille, tri, asc=False):
     try:
-        r = yf.screen(EquityQuery("and", filtres), size=taille, sortField="intradaymarketcap", sortAsc=False)
-        quotes = r.get("quotes", []) if isinstance(r, dict) else []
+        r = yf.screen(EquityQuery("and", filtres), size=taille, sortField=tri, sortAsc=asc)
+        return r.get("quotes", []) if isinstance(r, dict) else []
     except Exception as ex:
-        log(f"région {code} : échec du filtre complet ({ex})")
-        quotes = []
-    if not quotes:  # repli : sans filtre de croissance (les données de bilan manquent dans certains pays)
-        try:
-            r = yf.screen(EquityQuery("and", filtres[:2]), size=taille, sortField="intradaymarketcap", sortAsc=False)
-            quotes = r.get("quotes", []) if isinstance(r, dict) else []
-        except Exception as ex:
-            log(f"région {code} : échec du repli ({ex})")
+        log(f"filtre : {ex}")
+        return []
+
+
+def _requete_region(code, seuil, taille=40):
+    region = EquityQuery("eq", ["region", code])
+    croissance = EquityQuery("gt", ["totalrevenues1yrgrowth.lasttwelvemonths", 5])
+    # grandes capitalisations en croissance
+    grandes = _screen([region, EquityQuery("gte", ["intradaymarketcap", seuil * 5]), croissance], taille, "intradaymarketcap")
+    # moyennes capitalisations, triées par croissance du chiffre d'affaires
+    moyennes = _screen([region, EquityQuery("btwn", ["intradaymarketcap", seuil, seuil * 5]), croissance],
+                       max(15, taille // 2), "totalrevenues1yrgrowth.lasttwelvemonths")
+    quotes = grandes + moyennes
+    if not quotes:  # repli 1 : sans filtre de croissance (bilans manquants dans certains pays)
+        quotes = _screen([region, EquityQuery("gte", ["intradaymarketcap", seuil])], taille, "intradaymarketcap")
+    if not quotes:  # repli 2 : les plus grosses capitalisations du pays, sans seuil
+        quotes = _screen([region], 20, "intradaymarketcap")
     return quotes
 
 
@@ -170,17 +189,19 @@ def _score_rapide(c):
     return s
 
 
-def balayer_monde(par_region=40, garder=90):
+def balayer_monde(par_region=40, garder=110):
     """Retourne la liste des candidats (tickers) issus du balayage mondial, triés par score rapide."""
     candidats = {}
     for code, (pays, zone, seuil) in REGIONS.items():
-        quotes = _requete_region(code, seuil, par_region)
+        quotes = _requete_region(code, seuil, 100 if code == "us" else par_region)
         for q in quotes:
             sym = q.get("symbol")
             if not sym or q.get("quoteType", "EQUITY") != "EQUITY":
                 continue
+            if re.search(r"3[2-59]\.SA$", sym):  # certificats brésiliens (BDR) d'actions étrangères
+                continue
             candidats[sym] = {"ticker": sym, "nom": q.get("longName") or q.get("shortName") or sym, "type": "Action",
-                              "pays": pays, "zone": zone, "secteur": q.get("sector", "")}
+                              "pays": pays, "zone": zone, "secteur": q.get("sector", ""), "code_pays": code}
         log(f"{pays} : {len(quotes)} titres")
         time.sleep(0.4)
     log(f"{len(candidats)} candidats au total")
@@ -207,8 +228,19 @@ def balayer_monde(par_region=40, garder=90):
     return [candidats[t] | {"score_rapide": round(scores[t], 3)} for t in tri]
 
 
-def etf_monde(garder=25):
-    """ETF mondiaux les plus dynamiques (encours > 1 milliard), toutes catégories."""
+_MOTS_ETF = r"\b(ISHARES|XTRACKERS|SPDR|STATE STREET|INVESCO|VANGUARD|AMUNDI|LYXOR|WISDOMTREE|GLOBAL X|VANECK|UCITS|ETF|FUND|USD|EUR|GBP|CHF|ACC|DIST|INC|1C|1D|2C|C|D|THE|SELECT|SECTOR|INDEX|TRUST|SHARES|CLASS|S P|MSCI)\b"
+
+
+def _cle_etf(nom):
+    import unicodedata
+    n = unicodedata.normalize("NFKD", nom or "").encode("ascii", "ignore").decode().upper()
+    n = re.sub(r"[^A-Z0-9 ]", " ", n.replace("&", " "))
+    n = re.sub(_MOTS_ETF, " ", n)
+    return " ".join(n.split()[:2])
+
+
+def etf_monde(garder=30):
+    """ETF les plus dynamiques (encours > 1 milliard), sans doublons de cotation ni effet de levier, 2 par thème max."""
     try:
         q = ETFQuery("gt", ["fundnetassets", 1e9])
         r = yf.screen(q, size=250, sortField="trailing_3m_return", sortAsc=False)
@@ -216,13 +248,23 @@ def etf_monde(garder=25):
     except Exception as ex:
         log(f"ETF : échec du filtre ({ex})")
         quotes = []
-    vus, sortie = set(), []
+    vus_nom, themes, sortie = set(), {}, []
     for q in quotes:
-        nom = q.get("longName") or q.get("shortName") or q.get("symbol")
-        famille = re.sub(r"\b(2x|3x|ultra|leveraged|bull|bear|inverse|short)\b", "!", nom.lower())
-        if "!" in famille:  # on écarte les ETF à effet de levier / inverses
+        sym = q.get("symbol", "")
+        nom = q.get("longName") or q.get("shortName") or sym
+        if re.search(r"\b(2X|3X|ULTRA|LEVERAGED|BULL|BEAR|INVERSE|SHORT|DAILY)\b", nom.upper()):
             continue
-        sortie.append({"ticker": q["symbol"], "nom": nom, "type": "ETF", "pays": "Monde", "zone": "ETF", "secteur": ""})
+        if sym.endswith((".MX", ".SA", ".BA", ".SN", ".LM")):  # cotations secondaires en Amérique latine
+            continue
+        nom_court = re.sub(r"\s+", " ", re.sub(r"\(.*?\)|\b(Acc|Dist|1C|1D|USD|EUR)\b", "", nom)).strip().lower()
+        if nom_court in vus_nom:
+            continue
+        theme = _cle_etf(nom)
+        if themes.get(theme, 0) >= 2:
+            continue
+        vus_nom.add(nom_court)
+        themes[theme] = themes.get(theme, 0) + 1
+        sortie.append({"ticker": sym, "nom": nom, "type": "ETF", "pays": "Monde", "zone": "ETF", "secteur": ""})
         if len(sortie) >= garder:
             break
     log(f"{len(sortie)} ETF retenus")
@@ -268,9 +310,19 @@ def est_nouveau(cache, ticker, jours=7):
 # ----------------------------------------------------------------------------
 
 def _get(url):
-    req = urllib.request.Request(url, headers=UA_SEC)
-    with urllib.request.urlopen(req, timeout=20) as r:
-        return r.read()
+    derniere = None
+    for ua in UA_SEC_LISTE:
+        req = urllib.request.Request(url, headers={"User-Agent": ua, "Accept": "application/json, text/xml, */*",
+                                                   "Accept-Encoding": "identity"})
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                return r.read()
+        except urllib.error.HTTPError as ex:
+            derniere = ex
+            corps = ex.read()[:200].decode("utf-8", "ignore") if hasattr(ex, "read") else ""
+            log(f"SEC {ex.code} avec l'agent « {ua[:30]}… » : {corps.strip()[:120]}")
+            time.sleep(1)
+    raise derniere
 
 
 def _positions_13f(cik, accession):
@@ -348,6 +400,9 @@ def grands_fonds(forcer=False):
             time.sleep(0.3)
         except Exception as ex:
             log(f"13F {nom_fonds} : {ex}")
+            if "403" in str(ex) and not sortie["fonds"]:
+                log("accès SEC refusé depuis ce serveur : section « Grands fonds » reportée")
+                break
     if sortie["fonds"]:
         CACHE_FONDS.write_text(json.dumps(sortie, ensure_ascii=False, indent=1), encoding="utf-8")
     elif CACHE_FONDS.exists():

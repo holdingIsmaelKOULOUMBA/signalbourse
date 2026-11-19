@@ -1,73 +1,59 @@
-# SignalBourse : ton appli de signaux boursiers
+# SignalBourse : ton tableau de bord boursier mondial
 
-Un tableau de bord qui s'ouvre dans ton navigateur, sur ton PC ou ton téléphone, sans passer par Claude. Il a trois onglets :
-- **Ma liste** : tes ETF, obligations et actions, avec un signal court terme et un signal long terme, un stop, un objectif et la quantité maximale à acheter.
-- **💎 Pépites** : les 12 meilleures petites et moyennes valeurs et ETF thématiques du moment (défense, semi-conducteurs, IA, uranium, robotique, Inde, cybersécurité…), sélectionnées parmi 34.
-- **Méthode** : comment chaque score est calculé.
+Adresse : **https://holdingismaelkouloumba.github.io/signalbourse/** (protégée par mot de passe une fois le secret `SITE_PASSWORD` créé).
 
-Tu as deux façons de l'utiliser. Tu peux faire les deux.
+## Ce que contient le tableau de bord
+| Onglet | Contenu | Mise à jour |
+|---|---|---|
+| **Ma liste** | Tes ETF, obligations et actions : signal court terme et signal long terme, stop, objectif, quantité max | Toutes les heures |
+| **🌍 Opportunités monde** | Moyennes et grandes capitalisations de 30 pays (Amériques, Europe, Asie, Afrique du Sud, Égypte, Golfe…) avec une forte perspective de croissance, plus les ETF mondiaux les plus dynamiques. Badge 🆕 pour les nouvelles entrées, 🏦 quand un grand fonds vient d'acheter le titre | **Liste renouvelée chaque jour**, cours toutes les heures |
+| **💎 Pépites** | Petites et moyennes valeurs plus risquées : ta liste perso plus celles détectées automatiquement | Chaque jour / chaque heure |
+| **🛢️ Matières & Forex** | Or, argent, platine, cuivre, pétrole, gaz, blé, maïs, café, cacao, sucre ; EUR/USD, USD/JPY, GBP/USD, rand, naira, dirham, bitcoin… | Toutes les heures |
+| **🏦 Grands fonds** | Nouvelles positions, renforcements, allègements et ventes de Buffett, Ackman, Tepper, Druckenmiller, Burry, Dalio, Tiger Global, Coatue, Fundsmith, Baillie Gifford | Chaque semaine (les données sont trimestrielles) |
 
----
-
-## Option A : sur ton PC (5 minutes)
-
-1. Installe Python : https://www.python.org/downloads/ et coche bien **« Add Python to PATH »** pendant l'installation.
-2. Dézippe le dossier `SignalBourse` (par exemple dans Documents).
-3. **Double-clique sur `OUVRIR_SIGNALBOURSE.bat`** (sur Mac : `OUVRIR_SIGNALBOURSE_Mac.command`).
-
-Le tableau de bord s'ouvre dans ton navigateur à l'adresse **http://localhost:8765**. Il se met à jour tout seul toutes les 15 minutes tant que la fenêtre noire reste ouverte. La première analyse prend 1 à 3 minutes.
-
-📱 **Sur ton téléphone** : connecte-le au même Wi-Fi que ton PC et ouvre l'adresse affichée dans la fenêtre noire (du type `http://192.168.1.20:8765`). Dans le menu de ton navigateur, choisis « Ajouter à l'écran d'accueil » : tu auras une icône comme une vraie appli.
+Calendrier : toutes les heures de 7h à 22h en semaine (heure de Paris), une fois par jour le week-end.
+Newsletters par e-mail : **lundi 7h40** (« Ta semaine ») et **vendredi 18h10** (« Bilan de la semaine »).
 
 ---
 
-## Option B : en ligne 24h/24, sans laisser ton PC allumé (gratuit, 15 minutes)
+## Les réglages à faire une seule fois (secrets GitHub)
 
-GitHub fait tourner le programme pour toi 4 fois par jour en semaine et publie le tableau de bord à une adresse fixe, du type `https://ton-pseudo.github.io/signalbourse`. Tu l'ouvres de n'importe où, même depuis ton téléphone en 4G.
+Les secrets sont invisibles pour les autres, même si le dépôt est public.
+Pour les créer : **github.com/holdingIsmaelKOULOUMBA/signalbourse/settings/secrets/actions**, puis **New repository secret** (sur téléphone, passe d'abord le navigateur en « version ordinateur »).
 
-1. Crée un compte gratuit sur https://github.com.
-2. Clique sur **New repository**, nomme-le `signalbourse`, choisis **Public**, puis **Create**.
-3. Clique sur **uploading an existing file** et glisse **tout le contenu** du dossier SignalBourse, y compris le dossier caché `.github`. S'il n'apparaît pas, active l'affichage des fichiers cachés. Valide avec **Commit changes**.
-   *Si le dossier `.github` n'a pas été envoyé* : clique sur **Add file > Create new file**, tape le nom `.github/workflows/signalbourse.yml`, colle le contenu du fichier `signalbourse_workflow.yml` fourni dans le dossier, puis valide avec **Commit changes**.
-4. Va dans **Settings > Actions > General**, tout en bas, et coche **Read and write permissions**, puis **Save**.
-5. Va dans l'onglet **Actions**, ouvre « SignalBourse - mise à jour automatique » et clique sur **Run workflow**. Attends 3 à 5 minutes.
-6. Va dans **Settings > Pages**. Dans « Source », choisis **Deploy from a branch**, puis la branche **main** et le dossier **/docs**, et clique sur **Save**.
-7. Une minute plus tard, ton adresse s'affiche en haut de la page Pages. Ajoute-la à l'écran d'accueil de ton téléphone.
+| Nom du secret (à écrire exactement) | Valeur | À quoi ça sert |
+|---|---|---|
+| `SITE_PASSWORD` | Le mot de passe de ton choix | Protège l'accès au site |
+| `SMTP_USER` | Ton adresse Gmail | Expéditeur des newsletters |
+| `SMTP_PASSWORD` | Un « mot de passe d'application » Gmail (voir ci-dessous) | Envoi des newsletters |
+| `EMAIL_TO` | L'adresse qui reçoit les newsletters (peut être la même) | Destinataire |
+| `TELEGRAM_BOT_TOKEN` | Le token donné par @BotFather | Alertes sur ton téléphone |
+| `TELEGRAM_CHAT_ID` | Ton Id donné par @userinfobot | Alertes sur ton téléphone |
 
-La mise à jour se fait ensuite toute seule à 7h40, 12h10, 17h50 et 22h20 (heure de Paris, à une heure près selon l'heure d'été).
+**Créer le mot de passe d'application Gmail (gratuit)**
+1. Active la validation en deux étapes sur ton compte Google : myaccount.google.com > Sécurité.
+2. Ouvre **myaccount.google.com/apppasswords**, donne un nom (par exemple « SignalBourse »), puis **Créer**.
+3. Google affiche un code de 16 lettres : c'est la valeur de `SMTP_PASSWORD`. N'utilise jamais ton vrai mot de passe Gmail.
 
-⚠️ Avec un compte GitHub gratuit, la page est **publique** : n'importe qui ayant l'adresse peut la voir. N'y mets pas tes vraies positions ni ton vrai capital. Le `capital_eur` de `config.json` sert seulement à calculer les quantités ; laisse une valeur fictive si tu préfères.
-
-**Modifier ta liste en ligne** : sur GitHub, ouvre `config.json`, clique sur le crayon ✏️, modifie, puis **Commit changes**. La modification sera prise en compte à la prochaine mise à jour.
-
----
-
-## Alertes sur ton téléphone (Telegram, optionnel)
-
-1. Sur Telegram, parle à **@BotFather**, tape `/newbot` et récupère le *token*.
-2. Envoie un message à ton nouveau bot, puis ouvre `https://api.telegram.org/bot<TOKEN>/getUpdates` et note ton `chat_id`.
-3. Ensuite, selon l'option que tu utilises :
-   - **Option A** : colle le token et le chat_id dans `config.json` > `alertes`.
-   - **Option B** : sur GitHub, va dans **Settings > Secrets and variables > Actions > New repository secret** et crée `TELEGRAM_BOT_TOKEN` et `TELEGRAM_CHAT_ID`. Ne les mets pas dans `config.json`, car ce fichier est public.
-
-Tu reçois alors un message quand un signal change, quand un titre approche de son stop, et un résumé des pépites à chaque mise à jour.
+**Tester une newsletter tout de suite** : onglet **Actions** > « SignalBourse - mise à jour automatique » > **Run workflow** > écris `lundi` ou `bilan` dans la case > **Run workflow**.
 
 ---
 
-## Commandes avancées (terminal)
-| Ce que tu veux | Commande |
-|---|---|
-| L'appli (comme le double-clic) | `python signal_bourse.py app` |
-| Une analyse unique, puis ouverture du tableau de bord | `python signal_bourse.py analyse` |
-| Analyser 1 ou 2 titres | `python signal_bourse.py analyse NVDA MC.PA` |
-| Classement des pépites dans le terminal | `python signal_bourse.py pepites` |
-| Tester la stratégie sur 5 ans | `python signal_bourse.py backtest MC.PA` |
-| Ajouter ou retirer un titre | `python signal_bourse.py ajoute RMS.PA "Hermès" Action` / `retire GOOGL` |
+## Modifier tes listes
+Sur GitHub, ouvre `config.json`, clique sur le crayon ✏️, modifie, puis **Commit changes**.
+- `"watchlist"` = Ma liste.
+- `"pepites"` = tes pépites perso.
 
-**Ajouter une pépite à surveiller** : dans `config.json`, ajoute une ligne dans `"pepites"`, par exemple `{"ticker": "ALXXX.PA", "nom": "…", "type": "Action", "theme": "…"}`.
-**Tickers** : ce sont ceux de Yahoo Finance. Paris = `.PA`, Amsterdam = `.AS`, Francfort / Xetra = `.DE`, Milan = `.MI`, Londres = `.L`, et rien pour les valeurs américaines. Si un ticker est introuvable, il apparaît dans l'onglet Méthode : corrige-le en cherchant le nom sur finance.yahoo.com.
+Les opportunités monde, les ETF mondiaux, les matières premières et les devises se renouvellent seuls : rien à faire.
 
-## Comment lire les signaux
+## Utiliser l'appli sur ton PC (optionnel)
+Installe Python 3.12 ou plus récent (coche « Add Python to PATH »), puis double-clique sur `OUVRIR_SIGNALBOURSE.bat`.
+
+## Comment les scores sont calculés
+- **Court terme** (jours / semaines) : tendance récente, RSI, MACD, Bollinger, momentum, actualités des 14 derniers jours, achats et ventes des dirigeants.
+- **Long terme** (mois / années) : bilan (croissance, marges, rentabilité, dette, trésorerie), valorisation (PER, PEG), avis et objectifs des analystes, tendance de fond, actualités, dirigeants.
+- **Score croissance** : dynamique du cours sur 6 et 12 mois, croissance du chiffre d'affaires et des bénéfices, rentabilité, potentiel, PEG, taille de l'entreprise, plus un bonus si un grand fonds a acheté le titre.
+
 | Score | Signal |
 |---|---|
 | ≥ +0,45 | ACHAT FORT |
@@ -76,11 +62,11 @@ Tu reçois alors un message quand un signal change, quand un titre approche de s
 | −0,45 à −0,18 | ALLÉGER |
 | ≤ −0,45 | VENDRE |
 
-Le **score pépite** combine la dynamique du cours (6 et 12 mois), la tendance de fond, la distance au plus haut, la croissance du chiffre d'affaires et des bénéfices, la rentabilité, le potentiel selon les analystes, le PEG et la taille de l'entreprise. Plus il y a d'étoiles, plus le profil est fort, mais le **niveau de risque** affiché compte tout autant.
-
-## À savoir
-- Les pépites sont **beaucoup plus volatiles** que les grandes valeurs : elles peuvent perdre 30 à 50 % en quelques semaines. Les biotechs de la liste sont marquées « très risqué ». Une règle simple : 1 à 2 % du capital maximum par pépite, et 10 à 15 % au total.
-- Un score élevé veut souvent dire que le titre a **déjà beaucoup monté**. Combine-le avec le signal court terme pour éviter d'acheter au plus haut.
-- Les données Yahoo gratuites peuvent avoir 15 minutes de retard. L'éligibilité au PEA des ETF et actions étrangères est à vérifier chez ton courtier.
+## Limites à connaître
+- Données gratuites de Yahoo Finance (usage personnel, jusqu'à 15 minutes de retard) et de la SEC.
+- Afrique : seules les bourses de Johannesburg et du Caire sont couvertes gratuitement. La BRVM, la BVMAC, Lagos et Casablanca ne le sont pas.
+- Les positions des grands fonds sont publiées avec environ 45 jours de retard.
+- Les ETF américains de l'onglet Monde ne sont pas éligibles au PEA : il faut un compte-titres.
+- Le dépôt GitHub est public : le site est protégé par mot de passe, mais les fichiers de données du dépôt (historique, listes) restent lisibles par qui les cherche.
 - **Conformité** : en tant que salarié BNP Paribas, respecte la politique de la banque sur les transactions personnelles. N'utilise jamais une information non publique sur un client.
 - Outil d'aide à la décision, **pas un conseil en investissement**. Aucun signal n'est garanti.
