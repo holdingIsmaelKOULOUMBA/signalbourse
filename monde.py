@@ -91,7 +91,6 @@ FOREX = [
     {"ticker": "USDZAR=X", "nom": "Dollar / Rand sud-africain (USD/ZAR)", "type": "Forex", "recherche": "rand dollar"},
     {"ticker": "USDNGN=X", "nom": "Dollar / Naira nigérian (USD/NGN)", "type": "Forex", "recherche": "naira dollar"},
     {"ticker": "EURMAD=X", "nom": "Euro / Dirham marocain (EUR/MAD)", "type": "Forex", "recherche": "dirham euro"},
-    {"ticker": "BTC-USD", "nom": "Bitcoin / Dollar (très risqué)", "type": "Forex", "recherche": "bitcoin price"},
 ]
 
 # Grands investisseurs qui publient leurs positions (formulaire 13F, avec ~45 jours de retard)
@@ -537,7 +536,7 @@ def envoyer_email(sujet, html_corps):
 # Chiffrement de la page (seul quelqu'un qui a le mot de passe peut la lire)
 # ----------------------------------------------------------------------------
 
-def chiffrer_page(page_html, mot_de_passe, iterations=250000):
+def chiffrer_page(page_html, mot_de_passe, iterations=250000, prefixe=""):
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
     from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
     from cryptography.hazmat.primitives import hashes
@@ -547,7 +546,9 @@ def chiffrer_page(page_html, mot_de_passe, iterations=250000):
     b = lambda x: base64.b64encode(x).decode()
     return f"""<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>SignalBourse</title>
-<meta name="robots" content="noindex,nofollow">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#0b57d0">
+<link rel="manifest" href="{prefixe}manifest.json"><link rel="apple-touch-icon" href="{prefixe}icone-192.png"><link rel="icon" href="{prefixe}icone-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="SignalBourse">
 <style>body{{font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#0f1115;color:#eee;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}}
 .b{{background:#1b1e24;padding:28px;border-radius:14px;width:min(360px,90vw);text-align:center}}
 input{{width:100%;padding:12px;border-radius:8px;border:1px solid #333;background:#0f1115;color:#eee;font-size:16px;margin:12px 0}}

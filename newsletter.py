@@ -2,6 +2,13 @@
 """Newsletters SignalBourse : « Ta semaine » (lundi matin) et « Bilan de la semaine » (vendredi soir)."""
 
 import datetime as dt
+
+JOURS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+
+
+def jour_fr(iso):
+    d = dt.date.fromisoformat(iso)
+    return f"{JOURS_FR[d.weekday()]} {d.strftime('%d/%m')}"
 import html
 import os
 from pathlib import Path
@@ -89,10 +96,23 @@ def lundi(resultats, extra):
     corps = _titre("🌍 Les meilleures opportunités du moment")
     corps += _tableau([[_nom(r), _badge(r["signal_ct"]), _badge(r["signal_lt"]), _pct(r["perf"].get("1 mois")),
                         E("; ".join(r["raisons_pepite"][:2]))] for r in opps[:8]],
-                      ["Titre", "Court terme", "Long terme", "1 mois", "Pourquoi"])
-    corps += _titre("💎 Pépites à surveiller")
+                      ["Titre", "Court terme", "Long terme", "1 mois", "Pourquoi ce potentiel"])
+    corps += _titre("💎 Pépites (entreprises moyennes à fort potentiel)")
     corps += _tableau([[_nom(r), _badge(r["signal_ct"]), f'risque {monde_risque(r)}', _pct(r["perf"].get("3 mois"))] for r in pep[:6]],
                       ["Titre", "Court terme", "Risque", "3 mois"])
+    pf = extra.get("portefeuille")
+    if pf:
+        corps = _titre("💼 Mon portefeuille") + (f'<p style="font-size:14px">Valeur : <b>{pf["total"]:,.0f} €</b> · gain ou perte : {_pct(pf["gain_pct"])} ({pf["gain"]:+,.0f} €)</p>'.replace(",", " ")
+                 + "<ul style='font-size:13px'>" + "".join(f"<li>{E(c)}</li>" for c in pf["conseils"][:5]) + "</ul>") + corps
+    cal = extra.get("calendrier") or []
+    if cal:
+        corps += _titre("📅 Cette semaine")
+        corps += _tableau([[jour_fr(e["date"]), E(e["texte"])] for e in cal[:10]], ["Date", "Événement"])
+    cr = extra.get("cryptos") or []
+    if cr:
+        corps += _titre("🪙 Cryptos à surveiller (très risqué)")
+        corps += _tableau([[_nom(r), _badge(r["signal_ct"]), _badge(r["signal_lt"]), _pct(r["perf"].get("1 sem."))] for r in cr[:6]],
+                          ["Crypto", "Court terme", "Long terme", "1 sem."])
     corps += _titre("📋 Ma liste")
     corps += f'<p style="font-size:13px"><b>À acheter / renforcer :</b> {E(", ".join(r["nom"] for r in achats) or "aucune ligne cette semaine")}</p>'
     corps += f'<p style="font-size:13px"><b>Prudence :</b> {E(", ".join(r["nom"] for r in prudence) or "rien à signaler")}</p>'

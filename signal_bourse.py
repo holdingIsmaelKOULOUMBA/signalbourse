@@ -230,7 +230,7 @@ def analyser_actualites(news):
 def analyser_dirigeants(df):
     """Score des transactions de dirigeants sur 6 mois : achats = positif, ventes massives = négatif."""
     if df is None or df.empty:
-        return {"score": 0.0, "texte": "Pas de données de transactions de dirigeants"}
+        return {"score": 0.0, "texte": "Pas de données sur les achats et ventes d'actions des dirigeants"}
     try:
         d = df.copy()
         col_date = next((c for c in d.columns if "date" in c.lower()), None)
@@ -242,12 +242,12 @@ def analyser_dirigeants(df):
         ventes = texte.str.contains("sale|sell|vente").sum()
         total = achats + ventes
         if total == 0:
-            return {"score": 0.0, "texte": "Aucune transaction récente"}
+            return {"score": 0.0, "texte": "Aucun achat ni vente d'actions par les dirigeants récemment"}
         score = (achats - ventes) / total
         # Les ventes de dirigeants sont fréquentes (rémunération), on atténue le négatif
         if score < 0:
             score *= 0.4
-        return {"score": float(score), "texte": f"{achats} achat(s), {ventes} vente(s) de dirigeants sur 6 mois"}
+        return {"score": float(score), "texte": f"Sur 6 mois, les dirigeants ont acheté {achats} fois et vendu {ventes} fois des actions de leur entreprise"}
     except Exception:
         return {"score": 0.0, "texte": "Données de dirigeants illisibles"}
 
@@ -310,62 +310,95 @@ def score_technique_lt(d):
 
 
 # ----------------------------------------------------------------------------
-# Analyse fondamentale
+# Analyse du bilan (expliquée en mots simples)
 # ----------------------------------------------------------------------------
 
+def _f(info, *cles):
+    """Premier champ numérique disponible parmi les clés données."""
+    for c in cles:
+        v = info.get(c)
+        if isinstance(v, (int, float)) and not (isinstance(v, float) and math.isnan(v)):
+            return float(v)
+    return None
+
+
+def avis_analystes(info):
+    reco, nb = _f(info, "recommendationMean"), _f(info, "numberOfAnalystOpinions")
+    if not reco:
+        return None
+    mot = ("achat fort" if reco <= 1.6 else "achat" if reco <= 2.4 else "neutre" if reco <= 3.2
+           else "plutôt vente" if reco <= 4 else "vente")
+    return f"Avis des analystes : {mot}" + (f" ({int(nb)} analystes)" if nb else "")
+
+
 def score_fondamental(info, type_titre):
-    """Score long terme entre -1 et +1 à partir des fondamentaux disponibles."""
+    """Santé de l'entreprise (bilan + valorisation) : score de -1 à +1 et explications en mots simples."""
     if type_titre != "Action" or not info:
-        return 0.0, ["Fondamentaux non applicables (ETF / obligations / matières premières)"]
+        return 0.0, ["Pas de bilan à analyser pour ce type de produit (ETF, obligations, matière première, devise ou crypto)"]
     notes, raisons = [], []
 
-    def ajoute(val, note, texte):
+    def ajoute(note, texte):
         notes.append(note)
-        raisons.append(texte.format(val))
+        raisons.append(texte)
 
-    pe = info.get("forwardPE") or info.get("trailingPE")
-    if pe:
+    pe = _f(info, "forwardPE", "trailingPE")
+    if pe is not None:
         if pe < 0:
-            ajoute(pe, -0.5, "Entreprise en perte (PER {:.1f})")
-        elif pe < 15:
-            ajoute(pe, 0.5, "Valorisation attractive (PER {:.1f})")
-        elif pe < 30:
-            ajoute(pe, 0.1, "Valorisation raisonnable (PER {:.1f})")
-        elif pe < 50:
-            ajoute(pe, -0.3, "Valorisation élevée (PER {:.1f})")
+            ajoute(-0.5, "L'entreprise perd de l'argent pour l'instant")
+        elif pe < 12:
+            ajoute(0.5, f"Prix très raisonnable : tu paies {pe:.0f} fois son bénéfice annuel")
+        elif pe < 25:
+            ajoute(0.2, f"Prix raisonnable : tu paies {pe:.0f} fois son bénéfice annuel")
+        elif pe < 45:
+            ajoute(-0.2, f"Prix élevé : tu paies {pe:.0f} fois son bénéfice annuel")
         else:
-            ajoute(pe, -0.6, "Valorisation très élevée (PER {:.1f})")
-    peg = info.get("trailingPegRatio") or info.get("pegRatio")
+            ajoute(-0.5, f"Prix très élevé : tu paies {pe:.0f} fois son bénéfice annuel (beaucoup d'espoir déjà intégré)")
+    peg = _f(info, "trailingPegRatio", "pegRatio")
     if peg and peg > 0:
-        ajoute(peg, 0.4 if peg < 1.2 else (0 if peg < 2.5 else -0.4), "PEG {:.2f}")
-    cr = info.get("revenueGrowth")
+        if peg < 1.2:
+            ajoute(0.4, "Prix bon marché par rapport à la croissance attendue")
+        elif peg < 2.5:
+            ajoute(0.0, "Prix correct par rapport à la croissance attendue")
+        else:
+            ajoute(-0.4, "Prix cher par rapport à la croissance attendue")
+    cr = _f(info, "revenueGrowth")
     if cr is not None:
-        ajoute(cr * 100, float(np.clip(cr * 4, -0.6, 0.6)), "Croissance du chiffre d'affaires {:+.1f} %")
-    cb = info.get("earningsGrowth")
+        ajoute(float(np.clip(cr * 4, -0.6, 0.6)), f"Chiffre d'affaires : {cr:+.0%} sur un an")
+    cb = _f(info, "earningsGrowth")
     if cb is not None:
-        ajoute(cb * 100, float(np.clip(cb * 2, -0.6, 0.6)), "Croissance des bénéfices {:+.1f} %")
-    marge = info.get("profitMargins")
+        ajoute(float(np.clip(cb * 2, -0.6, 0.6)), f"Bénéfices : {cb:+.0%} sur un an")
+    marge = _f(info, "profitMargins")
     if marge is not None:
-        ajoute(marge * 100, 0.4 if marge > 0.2 else (0.1 if marge > 0.08 else -0.3), "Marge nette {:.1f} %")
-    roe = info.get("returnOnEquity")
+        qualif = "très rentable" if marge > 0.2 else "rentable" if marge > 0.08 else "peu rentable" if marge > 0 else "pas rentable"
+        ajoute(0.4 if marge > 0.2 else 0.1 if marge > 0.08 else -0.3,
+               f"Garde {marge * 100:.0f} € de bénéfice pour 100 € de ventes ({qualif})")
+    roe = _f(info, "returnOnEquity")
     if roe is not None:
-        ajoute(roe * 100, 0.4 if roe > 0.18 else (0.1 if roe > 0.10 else -0.3), "Rentabilité des capitaux propres {:.1f} %")
-    de = info.get("debtToEquity")
+        qualif = "excellente" if roe > 0.18 else "correcte" if roe > 0.10 else "faible"
+        ajoute(0.4 if roe > 0.18 else 0.1 if roe > 0.10 else -0.3,
+               f"Rapporte {roe * 100:.0f} % par an sur l'argent investi par les actionnaires ({qualif})")
+    de = _f(info, "debtToEquity")
     if de is not None:
-        ajoute(de, 0.2 if de < 60 else (0 if de < 150 else -0.4), "Dette / capitaux propres {:.0f} %")
-    fcf = info.get("freeCashflow")
+        ajoute(0.2 if de < 60 else 0 if de < 150 else -0.4,
+               "Endettement faible" if de < 60 else "Endettement modéré" if de < 150 else "Endettement élevé")
+    fcf = _f(info, "freeCashflow")
     if fcf is not None:
-        notes.append(0.2 if fcf > 0 else -0.4)
-        raisons.append("Flux de trésorerie disponible positif" if fcf > 0 else "Flux de trésorerie disponible négatif")
-    reco = info.get("recommendationMean")  # 1 = achat fort, 5 = vente
+        ajoute(0.2 if fcf > 0 else -0.4, "Génère de l'argent après avoir payé ses investissements" if fcf > 0
+               else "Dépense plus d'argent qu'elle n'en génère")
+    reco = _f(info, "recommendationMean")
     if reco:
-        ajoute(reco, float(np.clip((3 - reco) / 2, -0.6, 0.6)), "Consensus des analystes {:.1f}/5 (1 = achat fort)")
-    cible, prix = info.get("targetMeanPrice"), info.get("currentPrice") or info.get("regularMarketPrice")
+        notes.append(float(np.clip((3 - reco) / 2, -0.6, 0.6)))
+        raisons.append(avis_analystes(info))
+    cible, prix = _f(info, "targetMeanPrice"), _f(info, "currentPrice", "regularMarketPrice")
     if cible and prix:
         pot = cible / prix - 1
-        ajoute(pot * 100, float(np.clip(pot * 2, -0.5, 0.5)), "Potentiel vs objectif moyen des analystes {:+.1f} %")
+        ajoute(float(np.clip(pot * 2, -0.5, 0.5)), f"Objectif moyen des analystes : {pot:+.0%} par rapport au cours actuel")
+    div = _f(info, "dividendYield")
+    if div:
+        div = div / 100 if div > 1 else div
+        raisons.append(f"Verse un dividende d'environ {div:.1%} par an")
     if not notes:
-        return 0.0, ["Fondamentaux indisponibles"]
+        return 0.0, ["Données de bilan indisponibles"]
     return float(np.clip(np.mean(notes) * 1.6, -1, 1)), raisons
 
 
@@ -389,82 +422,134 @@ def raisons_techniques(d):
     der = d.iloc[-1]
     r = []
     c = der["Close"]
-    r.append(f"Cours {'au-dessus' if c > der['SMA200'] else 'en dessous'} de la moyenne 200 jours (tendance de fond "
-             f"{'haussière' if c > der['SMA200'] else 'baissière'})")
-    r.append(f"Moyenne 20 j {'>' if der['SMA20'] > der['SMA50'] else '<'} moyenne 50 j (tendance courte "
-             f"{'positive' if der['SMA20'] > der['SMA50'] else 'négative'})")
+    if not np.isnan(der["SMA200"]):
+        r.append("Tendance de fond en hausse : le cours est au-dessus de sa moyenne des 200 derniers jours" if c > der["SMA200"]
+                 else "Tendance de fond en baisse : le cours est sous sa moyenne des 200 derniers jours")
+    r.append("Tendance des dernières semaines positive" if der["SMA20"] > der["SMA50"] else "Tendance des dernières semaines négative")
     rsi = der["RSI"]
-    etat = "survendu (rebond possible)" if rsi < 30 else "suracheté (risque de repli)" if rsi > 70 else "neutre"
-    r.append(f"RSI {rsi:.0f} : {etat}")
-    r.append(f"MACD {'positif' if der['MACD_hist'] > 0 else 'négatif'}")
+    if rsi > 70:
+        r.append("A beaucoup monté très vite : une petite baisse à court terme est fréquente après ça")
+    elif rsi < 30:
+        r.append("A beaucoup baissé très vite : un rebond est possible")
+    else:
+        r.append("Pas de surchauffe : le rythme de hausse ou de baisse est normal")
+    r.append("L'élan des derniers jours s'améliore" if der["MACD_hist"] > 0 else "L'élan des derniers jours faiblit")
     if der["Volume"] > 2 * (der["Vol_moy20"] or 1):
-        r.append("Volume du jour plus de 2x la moyenne : mouvement significatif")
+        r.append("Beaucoup plus d'échanges que d'habitude : mouvement à prendre au sérieux")
     return r
 
 
-def score_pepite(d, info, type_titre, perf):
-    """Score « pépite » entre -1 et +1 : forte croissance + dynamique de cours + qualité + potentiel.
-    Pour les ETF : dynamique (3, 6, 12 mois), tendance de fond et résistance aux baisses."""
+def score_potentiel(d, info, type_titre, perf):
+    """Potentiel de hausse À VENIR (et pas seulement ce qui a déjà monté) : croissance attendue, qualité,
+    prix raisonnable et bon moment d'achat. Score de -1 à +1 avec explications simples."""
     c = d["Close"]
+    der = d.iloc[-1]
     notes, raisons = [], []
-    m6 = float(c.iloc[-1] / c.iloc[-127] - 1) if len(c) > 127 else None
-    m12 = perf.get("1 an")
-    au_dessus_200 = bool(c.iloc[-1] > d["SMA200"].iloc[-1]) if not np.isnan(d["SMA200"].iloc[-1]) else None
+    sma200 = der["SMA200"]
+    ecart200 = float(c.iloc[-1] / sma200 - 1) if not np.isnan(sma200) else None
     plus_haut = float(c.tail(252).max())
-    distance_haut = float(c.iloc[-1] / plus_haut - 1)
+    decote = float(c.iloc[-1] / plus_haut - 1)
+    m12 = perf.get("1 an")
 
-    if m6 is not None:
-        notes.append(float(np.clip(m6 * 1.5, -0.6, 0.6)))
-        raisons.append(f"Performance 6 mois {m6:+.0%}")
-    if m12 is not None:
-        notes.append(float(np.clip(m12, -0.5, 0.5)))
-        raisons.append(f"Performance 1 an {m12:+.0%}")
-    if au_dessus_200 is not None:
-        notes.append(0.3 if au_dessus_200 else -0.3)
-        raisons.append("Tendance de fond haussière (au-dessus de la moyenne 200 j)" if au_dessus_200
-                       else "Sous la moyenne 200 jours (tendance de fond baissière)")
-    notes.append(0.2 if distance_haut > -0.10 else (0 if distance_haut > -0.25 else -0.2))
-    raisons.append(f"À {distance_haut:.0%} de son plus haut sur 1 an")
-
+    # --- Croissance attendue et qualité (actions)
     if type_titre == "Action" and info:
-        cr = info.get("revenueGrowth")
+        fe, te = _f(info, "forwardEps"), _f(info, "trailingEps")
+        if fe and te and te > 0:
+            g = fe / te - 1
+            notes.append(float(np.clip(g * 2, -0.6, 0.8)))
+            raisons.append(f"Les analystes attendent des bénéfices {g:+.0%} l'an prochain")
+        cr = _f(info, "revenueGrowth")
         if cr is not None:
             notes.append(float(np.clip(cr * 2.5, -0.6, 0.8)))
-            raisons.append(f"Croissance du chiffre d'affaires {cr:+.0%}")
-        cb = info.get("earningsGrowth")
-        if cb is not None:
-            notes.append(float(np.clip(cb, -0.5, 0.6)))
-            raisons.append(f"Croissance des bénéfices {cb:+.0%}")
-        marge = info.get("profitMargins")
-        if marge is not None:
-            notes.append(0.3 if marge > 0.10 else (0.0 if marge > 0 else -0.4))
-            raisons.append("Rentable" if marge > 0 else "Pas encore rentable (risque élevé)")
-        cible, prix = info.get("targetMeanPrice"), info.get("currentPrice") or info.get("regularMarketPrice")
-        if cible and prix:
+            raisons.append(f"Ventes en {'hausse' if cr >= 0 else 'baisse'} de {abs(cr):.0%} sur un an")
+        cible, prix = _f(info, "targetMeanPrice"), _f(info, "currentPrice", "regularMarketPrice")
+        nb = _f(info, "numberOfAnalystOpinions") or 0
+        if cible and prix and nb >= 3:
             pot = cible / prix - 1
-            notes.append(float(np.clip(pot * 1.5, -0.4, 0.6)))
-            raisons.append(f"Potentiel selon les analystes {pot:+.0%}")
-        peg = info.get("trailingPegRatio") or info.get("pegRatio")
+            notes.append(float(np.clip(pot * 2, -0.5, 0.8)))
+            raisons.append(f"Les analystes voient {pot:+.0%} de potentiel ({int(nb)} avis)")
+        roe, marge, fcf = _f(info, "returnOnEquity"), _f(info, "profitMargins"), _f(info, "freeCashflow")
+        qualite = sum([(roe or 0) > 0.15, (marge or 0) > 0.10, (fcf or 0) > 0])
+        notes.append([-0.3, 0.0, 0.2, 0.4][qualite])
+        raisons.append(["Entreprise encore fragile (peu ou pas rentable)", "Qualité moyenne",
+                        "Entreprise de bonne qualité", "Entreprise de grande qualité (rentable et génère de l'argent)"][qualite])
+        peg = _f(info, "trailingPegRatio", "pegRatio")
         if peg and peg > 0:
-            notes.append(0.3 if peg < 1.5 else (0 if peg < 3 else -0.3))
-            raisons.append(f"PEG {peg:.1f} ({'croissance pas chère' if peg < 1.5 else 'croissance chère' if peg >= 3 else 'prix correct'})")
-        cap = info.get("marketCap")
-        if cap:
-            if cap < 5e9:
-                notes.append(0.15)
-                raisons.append(f"Petite capitalisation ({cap / 1e9:.1f} Md) : plus de potentiel, plus de risque")
-            elif cap > 100e9:
-                notes.append(-0.15)
-                raisons.append("Grande capitalisation : moins « pépite »")
+            notes.append(0.35 if peg < 1.3 else 0.0 if peg < 2.5 else -0.35)
+            if peg < 1.3:
+                raisons.append("Sa croissance n'est pas encore payée cher : bon rapport croissance / prix")
+        cap = _f(info, "marketCap")
+        if cap and cap < 10e9 * 1.2:
+            notes.append(0.1)
+            raisons.append("Taille moyenne : plus de place pour grandir que les géants")
+        # décote sur une entreprise solide = opportunité
+        if decote < -0.25 and qualite >= 2:
+            notes.append(0.25)
+            raisons.append(f"Cours {abs(decote):.0%} sous son plus haut d'un an alors que l'entreprise reste solide : possible opportunité")
+    else:
+        # --- ETF, matières premières, devises, cryptos : qualité de la tendance
+        m6 = float(c.iloc[-1] / c.iloc[-127] - 1) if len(c) > 127 else None
+        if m6 is not None:
+            notes.append(float(np.clip(m6, -0.5, 0.5)))
+            raisons.append(f"Évolution sur 6 mois : {m6:+.0%}")
+        if decote < -0.30:
+            notes.append(0.1)
+            raisons.append(f"Encore {abs(decote):.0%} sous son plus haut d'un an : marge de remontée")
+
+    # --- Moment d'achat (pour tous)
+    sma50_monte = len(d) > 20 and d["SMA50"].iloc[-1] > d["SMA50"].iloc[-20]
+    if ecart200 is not None:
+        recent_croisement = bool((c.tail(60) < d["SMA200"].tail(60)).any()) and ecart200 > 0
+        if recent_croisement and sma50_monte:
+            notes.append(0.4)
+            raisons.append("Le cours commence tout juste à remonter au-dessus de sa tendance de fond : bon moment potentiel")
+        elif 0 < ecart200 < 0.25 and sma50_monte:
+            notes.append(0.25)
+            raisons.append("Tendance de hausse saine, sans emballement")
+        elif ecart200 >= 0.40:
+            notes.append(-0.35)
+            raisons.append(f"A déjà beaucoup monté ({ecart200:.0%} au-dessus de sa moyenne de fond) : attendre un repli serait plus prudent")
+        elif ecart200 < -0.10 and not sma50_monte:
+            notes.append(-0.3)
+            raisons.append("Toujours en baisse : mieux vaut attendre des signes de reprise")
+    if der["RSI"] > 75:
+        notes.append(-0.2)
+        raisons.append("Surchauffe à court terme : risque de petite baisse")
+    if m12 is not None and m12 > 1.2:
+        notes.append(-0.2)
+        raisons.append(f"Déjà {m12:+.0%} en un an : une partie du potentiel est peut-être déjà dans le prix")
     if not notes:
         return 0.0, ["Données insuffisantes"]
-    return float(np.clip(np.mean(notes) * 1.5, -1, 1)), raisons
+    return float(np.clip(np.mean(notes) * 1.6, -1, 1)), raisons
+
+
+# compatibilité avec le reste du programme
+score_pepite = score_potentiel
 
 
 def niveau_risque(vol):
     if vol is None or np.isnan(vol):
         return "inconnu"
     return "très élevé" if vol > 0.60 else "élevé" if vol > 0.40 else "moyen" if vol > 0.25 else "modéré"
+
+
+EUROPE_PEA = {"France", "Germany", "Netherlands", "Belgium", "Italy", "Spain", "Portugal", "Ireland", "Austria",
+              "Finland", "Sweden", "Denmark", "Norway", "Iceland", "Luxembourg", "Greece", "Poland", "Czech Republic",
+              "Hungary", "Estonia", "Latvia", "Lithuania", "Slovenia", "Slovakia", "Croatia", "Romania", "Bulgaria",
+              "Malta", "Cyprus", "Liechtenstein"}
+PLACES_EUROPE = (".PA", ".AS", ".BR", ".MI", ".MC", ".DE", ".F", ".HE", ".CO", ".ST", ".OL", ".LS", ".VI", ".IR", ".AT", ".WA", ".PR")
+
+
+def eligibilite_pea(ticker, type_titre, pays_siege, nom):
+    if type_titre == "Action":
+        if pays_siege in EUROPE_PEA and ticker.endswith(PLACES_EUROPE):
+            return "PEA"
+        return "Compte-titres"
+    if type_titre in ("ETF", "Obligations", "Matières premières") and "PEA" in (nom or "").upper():
+        return "PEA"
+    if type_titre in ("ETF", "Obligations"):
+        return "À vérifier"
+    return "Compte-titres"
 
 
 def analyser(entree, cfg, avec_news=True):
@@ -476,44 +561,57 @@ def analyser(entree, cfg, avec_news=True):
 
     tech_ct = float(score_technique_ct(d).iloc[-1])
     tech_lt = float(score_technique_lt(d).fillna(0).iloc[-1])
-    info = infos_fondamentales(ticker)
+    info = infos_fondamentales(ticker) if type_titre not in ("Forex",) else {}
     fond, raisons_f = score_fondamental(info, type_titre)
     news = actualites(ticker, entree.get("recherche") or nom) if avec_news else []
     an = analyser_actualites(news)
     dirig = analyser_dirigeants(transactions_dirigeants(ticker)) if type_titre == "Action" else {"score": 0, "texte": "—"}
 
+    perf = {}
+    for lib, n in (("1 sem.", 5), ("1 mois", 21), ("3 mois", 63), ("1 an", 252)):
+        if len(h) > n:
+            perf[lib] = float(h["Close"].iloc[-1] / h["Close"].iloc[-1 - n] - 1)
+    pot, raisons_pot = score_potentiel(d, info, type_titre, perf)
+
     # Pondérations (profil dynamique / équilibré)
     score_ct = 0.70 * tech_ct + 0.25 * an["score"] + 0.05 * dirig["score"]
     if type_titre == "Action":
-        score_lt = 0.40 * fond + 0.35 * tech_lt + 0.15 * an["score"] + 0.10 * dirig["score"]
+        score_lt = 0.35 * fond + 0.25 * pot + 0.25 * tech_lt + 0.10 * an["score"] + 0.05 * dirig["score"]
     else:
-        score_lt = 0.80 * tech_lt + 0.20 * an["score"]
+        score_lt = 0.45 * tech_lt + 0.40 * pot + 0.15 * an["score"]
 
-    # Gestion du risque : stop et objectif basés sur la volatilité (ATR)
-    atr = float(der["ATR"])
-    stop = prix - 2 * atr
-    objectif = prix + 3 * atr
+    # Gestion du risque : seuil de protection et objectif selon la variation habituelle du cours
+    variation = float(der["ATR"])
+    stop = prix - 2 * variation
+    objectif = prix + 3 * variation
     vol_annuelle = float(d["Rdt"].tail(252).std() * math.sqrt(252))
     risque_eur = cfg["capital_eur"] * cfg["risque_par_trade_pct"] / 100
     quantite = int(risque_eur / max(prix - stop, 1e-9))
     quantite = min(quantite, int(cfg["capital_eur"] * 0.15 / prix))  # jamais plus de 15 % du capital sur une ligne
     max_dd = float((h["Close"] / h["Close"].cummax() - 1).tail(252).min())
+    pays_siege = info.get("country", "")
+    div = _f(info, "dividendYield")
+    if div and div > 1:
+        div = div / 100
 
-    perf = {}
-    for lib, n in (("1 sem.", 5), ("1 mois", 21), ("3 mois", 63), ("1 an", 252)):
-        if len(h) > n:
-            perf[lib] = float(h["Close"].iloc[-1] / h["Close"].iloc[-1 - n] - 1)
-
-    pep, raisons_pep = score_pepite(d, info, type_titre, perf)
+    deux_ans = d.tail(504)
+    pas = max(1, len(deux_ans) // 260)
+    courbe = {"dates": [x.strftime("%Y-%m-%d") for x in deux_ans.index[::pas]],
+              "cours": [round(float(x), 4) for x in deux_ans["Close"].values[::pas]],
+              "m50": [None if np.isnan(x) else round(float(x), 4) for x in deux_ans["SMA50"].values[::pas]],
+              "m200": [None if np.isnan(x) else round(float(x), 4) for x in deux_ans["SMA200"].values[::pas]]}
 
     return {
         "ticker": ticker, "nom": nom, "type": type_titre, "prix": prix, "theme": entree.get("theme", ""),
         "pays": entree.get("pays", ""), "zone": entree.get("zone", ""), "secteur": entree.get("secteur", "") or info.get("sector", ""),
-        "recherche": entree.get("recherche", ""), "code_pays": entree.get("code_pays", ""), "pays_siege": info.get("country", ""),
+        "recherche": entree.get("recherche", ""), "code_pays": entree.get("code_pays", ""), "pays_siege": pays_siege,
         "pct_institutions": info.get("heldPercentInstitutions"),
-        "score_pepite": round(pep, 3), "raisons_pepite": raisons_pep,
+        "pea": eligibilite_pea(ticker, type_titre, pays_siege, nom),
+        "dividende": div, "avis_analystes": avis_analystes(info),
+        "resume": (info.get("longBusinessSummary") or "")[:700], "site_web": info.get("website", ""),
+        "score_pepite": round(pot, 3), "raisons_pepite": raisons_pot,
         "capitalisation": info.get("marketCap"),
-        "devise": info.get("currency", ""), "date": str(d.index[-1].date()),
+        "devise": info.get("currency", "") or ("USD" if ticker.endswith("-USD") else ""), "date": str(d.index[-1].date()),
         "score_ct": round(score_ct, 3), "signal_ct": libelle(score_ct),
         "score_lt": round(score_lt, 3), "signal_lt": libelle(score_lt),
         "tech_ct": round(tech_ct, 3), "tech_lt": round(tech_lt, 3), "fondamental": round(fond, 3),
@@ -522,8 +620,9 @@ def analyser(entree, cfg, avec_news=True):
         "news_pos": an["positives"], "news_neg": an["negatives"], "news_dirig": an["dirigeants"],
         "rsi": float(der["RSI"]), "stop": stop, "objectif": objectif, "quantite": quantite,
         "vol_annuelle": vol_annuelle, "max_dd_1an": max_dd, "perf": perf,
-        "spark": [float(x) for x in h["Close"].tail(120).values],
+        "spark": [float(x) for x in h["Close"].tail(120).values], "courbe": courbe,
     }
+
 
 
 # ----------------------------------------------------------------------------
@@ -876,18 +975,24 @@ def cmd_pepites():
     print(AVERTISSEMENT)
 
 
-def _verifier_changements(cfg, resultats, precedent):
+def _verifier_changements(cfg, resultats, precedent, envoyer=True):
+    messages = []
+
+    def signaler(m):
+        messages.append(m)
+        if envoyer:
+            envoyer_alerte(cfg, m)
     for r in resultats:
         avant = precedent.get(r["ticker"], {})
         for horizon in ("ct", "lt"):
             cle = f"signal_{horizon}"
             if avant.get(cle) and avant[cle] != r[cle]:
-                envoyer_alerte(cfg, f"{r['nom']} ({r['ticker']}) {r['prix']:.2f} : signal "
-                                    f"{'court' if horizon == 'ct' else 'long'} terme {avant[cle]} → {r[cle]}")
+                signaler(f"{r['nom']} : signal {'court' if horizon == 'ct' else 'long'} terme {avant[cle].lower()} → {r[cle].lower()} (cours {r['prix']:.2f})")
         if r["prix"] <= r["stop"] * 1.005 and avant.get("prix", 0) > r["stop"]:
-            envoyer_alerte(cfg, f"{r['nom']} approche de son stop ({r['stop']:.2f})")
+            signaler(f"{r['nom']} approche de son seuil de protection ({r['stop']:.2f})")
         precedent[r["ticker"]] = {"signal_ct": r["signal_ct"], "signal_lt": r["signal_lt"], "prix": r["prix"]}
     ETAT.write_text(json.dumps(precedent, ensure_ascii=False), encoding="utf-8")
+    return messages
 
 
 def boucle_mise_a_jour(cfg, minutes, auto_refresh=True):
@@ -998,7 +1103,7 @@ def construire_monde(cfg, erreurs):
         cand_etfs = univers.get("etfs", [])
         cand_pep = cfg.get("pepites", [])
     else:
-        cand_actions = sel.get("opportunites", []) + sel.get("pepites_auto", [])
+        cand_actions = sel.get("opportunites", []) + sel.get("pepites_auto", []) + sel.get("afrique", [])
         cand_etfs = sel.get("etfs", [])
         cand_pep = cfg.get("pepites", [])
     print(f"Mode {'complet (renouvellement de la liste)' if complet else 'rapide (mise à jour des cours)'} : "
@@ -1048,13 +1153,14 @@ def construire_monde(cfg, erreurs):
         return sortie
     opportunites = diversifier(grandes, 30, 5, 2)
     pep_auto = diversifier(moyennes, 10, 2, 1)
+    afrique = [r for r in sorted(filtres, key=lambda r: -r["score_global"]) if r.get("pays") in ("Afrique du Sud", "Égypte")][:6]
 
     res_pep, err = analyser_liste(cand_pep, cfg, avec_news=False, silencieux=True)
     erreurs += err
     for r in res_pep:
         r["fonds_acheteurs"] = monde.fonds_qui_achetent(r["nom"], fonds, r["ticker"])
     vus, pepites = set(), []
-    for r in sorted(res_pep + pep_auto, key=lambda r: -r["score_pepite"]):
+    for r in sorted(res_pep + pep_auto, key=lambda r: -(0.6 * r["score_pepite"] + 0.4 * r["score_lt"])):
         if r["ticker"] not in vus:
             vus.add(r["ticker"])
             pepites.append(r)
@@ -1068,45 +1174,223 @@ def construire_monde(cfg, erreurs):
     marches, err = analyser_liste(monde.MATIERES + monde.FOREX, cfg, avec_news=True, silencieux=True)
     erreurs += err
 
-    _ajouter_news(opportunites + pepites + etfs)
+    # --- cryptos : sélection renouvelée chaque jour parmi les 250 premières
+    import crypto
+    cand_crypto = crypto.selection() if complet else sel.get("cryptos", [])
+    res_cr, _ = analyser_liste(cand_crypto, cfg, avec_news=False, silencieux=True)
+    prelim = {c["ticker"]: c.get("score_prelim", 0) for c in cand_crypto}
+    for r in res_cr:
+        r["score_global"] = 0.5 * r["score_pepite"] + 0.3 * r["score_lt"] + 0.2 * prelim.get(r["ticker"], 0)
+    base = [r for r in res_cr if r["ticker"] in ("BTC-USD", "ETH-USD")]
+    autres = sorted([r for r in res_cr if r["ticker"] not in ("BTC-USD", "ETH-USD")], key=lambda r: -r["score_global"])[:14]
+    cryptos = base + autres
+
+    # badge « Nouveau » pour les cryptos (même registre que les actions)
+    premiere = univers.setdefault("premiere_apparition", {})
+    for r in cryptos:
+        premiere.setdefault(r["ticker"], aujourd_hui)
+        r["nouveau"] = monde.est_nouveau(univers, r["ticker"])
+    try:
+        monde.CACHE_UNIVERS.write_text(json.dumps(univers, ensure_ascii=False, indent=1), encoding="utf-8")
+    except Exception:
+        pass
+
+    _ajouter_news(opportunites + pepites + etfs + afrique + cryptos)
 
     if complet:
         garder = lambda lst: [{k: r.get(k, "") for k in _CHAMPS_ENTREE} for r in lst]
         SELECTION.write_text(json.dumps({"date": aujourd_hui, "opportunites": garder(opportunites),
-                                         "pepites_auto": garder(pep_auto), "etfs": garder(etfs)},
+                                         "pepites_auto": garder(pep_auto), "etfs": garder(etfs), "afrique": garder(afrique),
+                                         "cryptos": [{k: r.get(k, "") for k in _CHAMPS_ENTREE} | {"score_prelim": prelim.get(r["ticker"], 0)} for r in cryptos]},
                                         ensure_ascii=False, indent=1), encoding="utf-8")
-    return {"opportunites": opportunites, "pepites": pepites, "etfs": etfs, "marches": marches,
-            "fonds": fonds, "complet": complet}
+    return {"opportunites": opportunites, "pepites": pepites, "etfs": etfs, "marches": marches, "afrique_actions": afrique,
+            "cryptos": cryptos, "fonds": fonds, "complet": complet}
+
+
+FICHES_CACHE = DOSSIER / "fiches_cache.json"
+
+
+def donnees_fiche(ticker, cache):
+    """Bilan sur plusieurs années et principaux investisseurs (actions seulement), mis en cache 7 jours."""
+    c = cache.get(ticker)
+    if c and (dt.date.today() - dt.date.fromisoformat(c["date"])).days < 7:
+        return c
+    out = {"date": dt.date.today().isoformat(), "bilan": [], "actionnaires": []}
+    try:
+        t = yf.Ticker(ticker)
+        inc, cf = t.income_stmt, t.cashflow
+        if inc is not None and not inc.empty:
+            for col in list(inc.columns)[:4][::-1]:
+                ligne = lambda df, nom: (float(df.loc[nom, col]) / 1e6 if df is not None and nom in df.index and col in df.columns
+                                         and pd.notna(df.loc[nom, col]) else None)
+                out["bilan"].append({"annee": str(col)[:4], "ca": ligne(inc, "Total Revenue"),
+                                     "benefice": ligne(inc, "Net Income"), "fcf": ligne(cf, "Free Cash Flow")})
+        h = t.institutional_holders
+        if h is not None and not h.empty:
+            col_part = next((c for c in h.columns if "pct" in c.lower() or "%" in c), None)
+            for _, row in h.head(6).iterrows():
+                out["actionnaires"].append({"nom": str(row.get("Holder", "")), "part": float(row[col_part]) if col_part else 0.0})
+    except Exception:
+        pass
+    cache[ticker] = out
+    return out
+
+
+def actus_marche():
+    news = []
+    for q, hl, gl in (("bourse marchés actions", "fr", "FR"), ("stock market today", "en", "US")):
+        try:
+            news += _lire_rss(f"https://news.google.com/rss/search?q={urllib.parse.quote(q + ' when:1d')}&hl={hl}&gl={gl}&ceid={gl}:{hl}", 5)
+        except Exception:
+            pass
+    return news[:8]
+
+
+def vers_euros(montant, devise):
+    import monde
+    usd = monde.en_dollars(montant, devise or "EUR")
+    eur = monde.en_dollars(1.0, "EUR")
+    return usd / eur if usd and eur else None
 
 
 def cmd_site():
-    """Génère le site dans le dossier docs/ (utilisé par GitHub Pages pour la version en ligne 24h/24)."""
+    """Génère le site complet dans docs/ (version en ligne 24h/24 via GitHub Actions)."""
+    import etat
+    import interface
+    import monde
+    import portefeuille
+    import calendrier
+    import suivi
+    import brvm
+    etat.ouvrir()
     cfg = charger_config()
     resultats, erreurs = analyser_liste(cfg["watchlist"], cfg, avec_news=True)
     try:
         extra = construire_monde(cfg, erreurs)
     except Exception as ex:  # le module monde ne doit jamais bloquer le reste
+        import traceback
+        traceback.print_exc()
         print(f"Module monde indisponible : {ex}", flush=True)
         pep, err = trouver_pepites(cfg, silencieux=True)
         erreurs += err
         extra = {"pepites": pep, "complet": False}
+    complet = extra.get("complet")
     pepites = extra.get("pepites", [])
-    chemin = ecrire_page(resultats, pepites, erreurs, dossier=DOSSIER / "docs", extra=extra)
-    (DOSSIER / "docs" / ".nojekyll").write_text("", encoding="utf-8")
-    tous = resultats + pepites + extra.get("opportunites", []) + extra.get("etfs", []) + extra.get("marches", [])
-    if extra.get("complet") or not HISTO.exists():
-        enregistrer_historique(tous)  # une photo complète par jour suffit pour le suivi long terme
+    marches = extra.get("marches", [])
+
+    # --- Portefeuille (secret PORTEFEUILLE)
+    positions, _ = portefeuille.lire()
+    connus = {r["ticker"]: r for r in resultats + pepites + marches + extra.get("opportunites", []) + extra.get("cryptos", [])
+              + extra.get("etfs", []) + extra.get("afrique_actions", [])}
+    a_analyser = [{"ticker": p["ticker"], "nom": p["ticker"], "type": p["type"] or ("Crypto" if p["ticker"].endswith("-USD") else "Action")}
+                  for p in positions if p["ticker"] not in connus]
+    res_pf, err = analyser_liste(a_analyser, cfg, avec_news=True, silencieux=True)
+    erreurs += err
+    for r in res_pf:
+        try:
+            nom_long = yf.Ticker(r["ticker"]).info.get("longName")
+            if nom_long:
+                r["nom"] = nom_long
+        except Exception:
+            pass
+        connus[r["ticker"]] = r
+    pf = portefeuille.construire(positions, connus, vers_euros) if positions else None
+
+    # --- Afrique
+    try:
+        b = brvm.analyse()
+    except Exception as ex:
+        b = {"titres": [], "message": f"BRVM indisponible ({ex})"}
+    afrique = {"brvm": b, "actions": extra.get("afrique_actions", []),
+               "devises": [r for r in marches if r["ticker"] in ("USDZAR=X", "USDNGN=X", "EURMAD=X")]}
+
+    # --- Calendrier
+    titres_cal = [{"ticker": r["ticker"], "nom": r["nom"]} for r in
+                  resultats + res_pf + extra.get("opportunites", [])[:15] + pepites[:8] if r["type"] == "Action"]
+    if pf:
+        titres_cal += [{"ticker": l["r"]["ticker"], "nom": l["r"]["nom"]} for l in pf["lignes"] if l["r"]["type"] == "Action"]
+    vus = set()
+    titres_cal = [t for t in titres_cal if not (t["ticker"] in vus or vus.add(t["ticker"]))]
+    try:
+        cal = calendrier.a_venir(titres_cal)
+    except Exception as ex:
+        print(f"Calendrier indisponible : {ex}", flush=True)
+        cal = []
+
+    # --- Alertes
     precedent = json.loads(ETAT.read_text(encoding="utf-8")) if ETAT.exists() else {}
-    _verifier_changements(cfg, resultats + extra.get("marches", []), precedent)
-    if extra.get("complet") and (os.environ.get("TELEGRAM_BOT_TOKEN") or cfg["alertes"].get("telegram_bot_token")):
+    suivis = resultats + marches + ([l["r"] for l in pf["lignes"]] if pf else [])
+    alertes = _verifier_changements(cfg, suivis, precedent, envoyer=True)
+    mes_titres = {r["ticker"] for r in resultats} | ({l["r"]["ticker"] for l in pf["lignes"]} if pf else set())
+    demain = (dt.date.today() + dt.timedelta(days=2)).isoformat()
+    proches = [e for e in cal if e["date"] <= demain and (e.get("ticker") in mes_titres or e["type"] == "Banque centrale")]
+    alertes += [f"📅 {e['texte']} le {dt.date.fromisoformat(e['date']).strftime('%d/%m')}" for e in proches]
+    if pf:
+        alertes += [c for c in pf["conseils"] if "seuil de protection" in c or "« vendre »" in c or "« alléger »" in c]
+    if complet and proches:
+        envoyer_alerte(cfg, "📅 À venir : " + " ; ".join(e["texte"] for e in proches))
+
+    # --- Bulletin de notes
+    if complet or not HISTO.exists():
+        tous_hist = resultats + pepites + marches + extra.get("opportunites", []) + extra.get("etfs", []) + extra.get("cryptos", []) + res_pf
+        enregistrer_historique(tous_hist)
+    try:
+        bul = suivi.bulletin()
+        simu = suivi.simulation(resultats + extra.get("opportunites", [])[:8], historique, backtest)
+    except Exception as ex:
+        print(f"Bulletin indisponible : {ex}", flush=True)
+        bul, simu = {"jours": 0, "tableau": {}}, []
+
+    data = {"liste": resultats, "portefeuille": pf, "opportunites": extra.get("opportunites", []), "etfs": extra.get("etfs", []),
+            "pepites": pepites, "cryptos": extra.get("cryptos", []), "afrique": afrique, "marches": marches,
+            "fonds": extra.get("fonds"), "calendrier": cal, "alertes": alertes, "bulletin": bul, "simulation": simu,
+            "erreurs": erreurs, "actus_marche": actus_marche()}
+
+    # --- Écriture du site
+    sortie = DOSSIER / "docs"
+    (sortie / "f").mkdir(parents=True, exist_ok=True)
+    for vieux in (sortie / "f").glob("*.html"):
+        vieux.unlink()
+    mdp = os.environ.get("SITE_PASSWORD")
+    proteger = (lambda h, pre="": monde.chiffrer_page(h, mdp, prefixe=pre)) if mdp else (lambda h, pre="": h)
+    (sortie / "index.html").write_text(proteger(interface.page(data)), encoding="utf-8")
+
+    cache_f = json.loads(FICHES_CACHE.read_text(encoding="utf-8")) if FICHES_CACHE.exists() else {}
+    hist = pd.read_csv(HISTO) if HISTO.exists() else pd.DataFrame()
+    tous = list(connus.values())
+    for r in tous:
+        ex = {"evenements": [e for e in cal if e.get("ticker") == r["ticker"]]}
+        if r["type"] == "Action" and complet:
+            ex.update(donnees_fiche(r["ticker"], cache_f))
+        elif r["ticker"] in cache_f:
+            ex.update({k: cache_f[r["ticker"]].get(k) for k in ("bilan", "actionnaires")})
+        if not hist.empty:
+            h = hist[hist["ticker"] == r["ticker"]].tail(40)
+            ex["historique"] = [{"date": str(x["horodatage"])[:10], "prix": x["prix"], "signal_ct": x["signal_ct"], "signal_lt": x["signal_lt"]}
+                                for _, x in h.iterrows()]
+        (sortie / "f" / f"{interface.slug(r['ticker'])}.html").write_text(proteger(interface.fiche(r, ex), "../"), encoding="utf-8")
+    FICHES_CACHE.write_text(json.dumps(cache_f, ensure_ascii=False), encoding="utf-8")
+    (sortie / "manifest.json").write_text(json.dumps(interface.MANIFEST, ensure_ascii=False), encoding="utf-8")
+    (sortie / "sw.js").write_text(interface.SERVICE_WORKER, encoding="utf-8")
+    for t in (192, 512):
+        if not (sortie / f"icone-{t}.png").exists():
+            try:
+                interface.icone(sortie / f"icone-{t}.png", t)
+            except Exception as ex:
+                print(f"Icône : {ex}", flush=True)
+    (sortie / ".nojekyll").write_text("", encoding="utf-8")
+    print(f"Site généré : {sortie / 'index.html'} + {len(tous)} fiches", flush=True)
+
+    if complet and (os.environ.get("TELEGRAM_BOT_TOKEN") or cfg["alertes"].get("telegram_bot_token")):
         top = ", ".join(r["nom"] for r in (extra.get("opportunites") or [])[:3])
         pep = ", ".join(r["nom"] for r in pepites[:3])
-        envoyer_alerte(cfg, f"📈 SignalBourse : liste du jour renouvelée.\nOpportunités monde : {top}\nPépites : {pep}")
+        cr = ", ".join(r["nom"] for r in (extra.get("cryptos") or [])[2:5])
+        envoyer_alerte(cfg, f"📈 SignalBourse : listes du jour renouvelées.\nOpportunités : {top}\nPépites : {pep}\nCryptos : {cr}")
     quelle = os.environ.get("NEWSLETTER", "").strip().lower()
     if quelle in ("lundi", "bilan"):
         import newsletter
-        newsletter.envoyer(quelle, resultats, extra)
-    print(f"Site généré : {chemin}")
+        newsletter.envoyer(quelle, resultats, extra | {"portefeuille": pf, "calendrier": cal})
+    etat.fermer()
 
 
 def cmd_idees(top=15):
