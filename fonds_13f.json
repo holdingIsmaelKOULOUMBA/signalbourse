@@ -1,0 +1,1093 @@
+{
+ "date": "2026-11-19",
+ "fonds": [
+  {
+   "nom": "Bill Ackman - Pershing Square Capital Management",
+   "trimestre": "",
+   "publie": "",
+   "top": [
+    {
+     "nom": "Pershing Square Inc. (PS)",
+     "poids": 0.3348,
+     "ticker": "PS"
+    },
+    {
+     "nom": "Uber Technologies Inc. (UBER)",
+     "poids": 0.0762,
+     "ticker": "UBER"
+    },
+    {
+     "nom": "Amazon.com Inc. (AMZN)",
+     "poids": 0.0688,
+     "ticker": "AMZN"
+    },
+    {
+     "nom": "Microsoft Corp. (MSFT)",
+     "poids": 0.0677,
+     "ticker": "MSFT"
+    },
+    {
+     "nom": "Meta Platforms Inc. (META)",
+     "poids": 0.0667,
+     "ticker": "META"
+    },
+    {
+     "nom": "Howard Hughes Holdings Inc. (HHH)",
+     "poids": 0.0666,
+     "ticker": "HHH"
+    },
+    {
+     "nom": "Brookfield Corp. (BN)",
+     "poids": 0.0608,
+     "ticker": "BN"
+    },
+    {
+     "nom": "Restaurant Brands International (QSR)",
+     "poids": 0.0508,
+     "ticker": "QSR"
+    },
+    {
+     "nom": "Netflix Inc. (NFLX)",
+     "poids": 0.0348,
+     "ticker": "NFLX"
+    },
+    {
+     "nom": "Mastercard Inc. (MA)",
+     "poids": 0.0338,
+     "ticker": "MA"
+    }
+   ],
+   "nouveaux": [
+    {
+     "nom": "Intercontinental Exchange Inc. (ICE)",
+     "poids": 0.032799999999999996,
+     "ticker": "ICE"
+    },
+    {
+     "nom": "Alcon Inc. (ALC)",
+     "poids": 0.031,
+     "ticker": "ALC"
+    }
+   ],
+   "renforces": [
+    {
+     "nom": "Netflix Inc. (NFLX)",
+     "var": 0.1782,
+     "ticker": "NFLX"
+    }
+   ],
+   "alleges": [
+    {
+     "nom": "Uber Technologies Inc. (UBER)",
+     "var": -0.0017000000000000001,
+     "ticker": "UBER"
+    },
+    {
+     "nom": "Amazon.com Inc. (AMZN)",
+     "var": -0.0068000000000000005,
+     "ticker": "AMZN"
+    },
+    {
+     "nom": "Microsoft Corp. (MSFT)",
+     "var": -0.34509999999999996,
+     "ticker": "MSFT"
+    },
+    {
+     "nom": "Meta Platforms Inc. (META)",
+     "var": -0.11349999999999999,
+     "ticker": "META"
+    },
+    {
+     "nom": "Brookfield Corp. (BN)",
+     "var": -0.107,
+     "ticker": "BN"
+    },
+    {
+     "nom": "Restaurant Brands International (QSR)",
+     "var": -0.1477,
+     "ticker": "QSR"
+    },
+    {
+     "nom": "Mastercard Inc. (MA)",
+     "var": -0.1112,
+     "ticker": "MA"
+    },
+    {
+     "nom": "Visa Inc. (V)",
+     "var": -0.1222,
+     "ticker": "V"
+    }
+   ],
+   "vendus": []
+  },
+  {
+   "nom": "Chuck Akre - Akre Capital Management",
+   "trimestre": "",
+   "publie": "",
+   "top": [
+    {
+     "nom": "Mastercard Inc. (MA)",
+     "poids": 0.22039999999999998,
+     "ticker": "MA"
+    },
+    {
+     "nom": "Moody's Corp. (MCO)",
+     "poids": 0.1051,
+     "ticker": "MCO"
+    },
+    {
+     "nom": "KKR & Co. L.P. (KKR)",
+     "poids": 0.0894,
+     "ticker": "KKR"
+    },
+    {
+     "nom": "Brookfield Corp. (BN)",
+     "poids": 0.087,
+     "ticker": "BN"
+    },
+    {
+     "nom": "Roper Technologies Inc. (ROP)",
+     "poids": 0.0796,
+     "ticker": "ROP"
+    },
+    {
+     "nom": "Visa Inc. (V)",
+     "poids": 0.0759,
+     "ticker": "V"
+    },
+    {
+     "nom": "CoStar Group Inc. (CSGP)",
+     "poids": 0.0673,
+     "ticker": "CSGP"
+    },
+    {
+     "nom": "Fair Isaac Corp. (FICO)",
+     "poids": 0.0506,
+     "ticker": "FICO"
+    },
+    {
+     "nom": "Copart Inc. (CPRT)",
+     "poids": 0.046,
+     "ticker": "CPRT"
+    },
+    {
+     "nom": "CCC Intelligent Solutions Hldgs Inc. (CCC)",
+     "poids": 0.044199999999999996,
+     "ticker": "CCC"
+    }
+   ],
+   "nouveaux": [
+    {
+     "nom": "TransDigm Group Inc. (TDG)",
+     "poids": 0.0028000000000000004,
+     "ticker": "TDG"
+    },
+    {
+     "nom": "Rollins Inc. (ROL)",
+     "poids": 0.0022,
+     "ticker": "ROL"
+    }
+   ],
+   "renforces": [
+    {
+     "nom": "Fair Isaac Corp. (FICO)",
+     "var": 0.0394,
+     "ticker": "FICO"
+    }
+   ],
+   "alleges": [
+    {
+     "nom": "Mastercard Inc. (MA)",
+     "var": -0.1159,
+     "ticker": "MA"
+    },
+    {
+     "nom": "Moody's Corp. (MCO)",
+     "var": -0.1193,
+     "ticker": "MCO"
+    },
+    {
+     "nom": "KKR & Co. L.P. (KKR)",
+     "var": -0.1348,
+     "ticker": "KKR"
+    },
+    {
+     "nom": "Brookfield Corp. (BN)",
+     "var": -0.1334,
+     "ticker": "BN"
+    },
+    {
+     "nom": "Roper Technologies Inc. (ROP)",
+     "var": -0.14800000000000002,
+     "ticker": "ROP"
+    },
+    {
+     "nom": "Visa Inc. (V)",
+     "var": -0.1628,
+     "ticker": "V"
+    },
+    {
+     "nom": "CoStar Group Inc. (CSGP)",
+     "var": -0.076,
+     "ticker": "CSGP"
+    },
+    {
+     "nom": "Copart Inc. (CPRT)",
+     "var": -0.0712,
+     "ticker": "CPRT"
+    }
+   ],
+   "vendus": []
+  },
+  {
+   "nom": "David Tepper - Appaloosa Management",
+   "trimestre": "",
+   "publie": "",
+   "top": [
+    {
+     "nom": "Micron Technology Inc. (MU)",
+     "poids": 0.1761,
+     "ticker": "MU"
+    },
+    {
+     "nom": "Amazon.com Inc. (AMZN)",
+     "poids": 0.1475,
+     "ticker": "AMZN"
+    },
+    {
+     "nom": "Taiwan Semiconductor S.A. (TSM)",
+     "poids": 0.095,
+     "ticker": "TSM"
+    },
+    {
+     "nom": "Space Exploration Technologies Corp. (SPCX)",
+     "poids": 0.0736,
+     "ticker": "SPCX"
+    },
+    {
+     "nom": "Uber Technologies Inc. (UBER)",
+     "poids": 0.0663,
+     "ticker": "UBER"
+    },
+    {
+     "nom": "NVIDIA Corp. (NVDA)",
+     "poids": 0.0604,
+     "ticker": "NVDA"
+    },
+    {
+     "nom": "iShares MSCI South Korea ETF (EWY)",
+     "poids": 0.0509,
+     "ticker": "EWY"
+    },
+    {
+     "nom": "Meta Platforms Inc. (META)",
+     "poids": 0.0504,
+     "ticker": "META"
+    },
+    {
+     "nom": "Alphabet Inc. CL C (GOOG)",
+     "poids": 0.0451,
+     "ticker": "GOOG"
+    },
+    {
+     "nom": "Vistra Corp. (VST)",
+     "poids": 0.0387,
+     "ticker": "VST"
+    }
+   ],
+   "nouveaux": [
+    {
+     "nom": "Oracle Corp. (ORCL)",
+     "poids": 0.022799999999999997,
+     "ticker": "ORCL"
+    },
+    {
+     "nom": "Applied Materials (AMAT)",
+     "poids": 0.0152,
+     "ticker": "AMAT"
+    },
+    {
+     "nom": "Modine Mfg. (MOD)",
+     "poids": 0.006999999999999999,
+     "ticker": "MOD"
+    },
+    {
+     "nom": "PG&E Corp. (PCG)",
+     "poids": 0.0040999999999999995,
+     "ticker": "PCG"
+    }
+   ],
+   "renforces": [
+    {
+     "nom": "Micron Technology Inc. (MU)",
+     "var": 0.2821,
+     "ticker": "MU"
+    },
+    {
+     "nom": "Space Exploration Technologies Corp. (SPCX)",
+     "var": 16.2592,
+     "ticker": "SPCX"
+    },
+    {
+     "nom": "NVIDIA Corp. (NVDA)",
+     "var": 0.3115,
+     "ticker": "NVDA"
+    },
+    {
+     "nom": "Lam Research (LRCX)",
+     "var": 0.634,
+     "ticker": "LRCX"
+    },
+    {
+     "nom": "ASML Holding NV (ASML)",
+     "var": 0.3,
+     "ticker": "ASML"
+    },
+    {
+     "nom": "Coreweave Inc Cl A (CRWV)",
+     "var": 0.1268,
+     "ticker": "CRWV"
+    }
+   ],
+   "alleges": [
+    {
+     "nom": "Amazon.com Inc. (AMZN)",
+     "var": -0.105,
+     "ticker": "AMZN"
+    },
+    {
+     "nom": "Taiwan Semiconductor S.A. (TSM)",
+     "var": -0.0455,
+     "ticker": "TSM"
+    },
+    {
+     "nom": "Uber Technologies Inc. (UBER)",
+     "var": -0.0493,
+     "ticker": "UBER"
+    },
+    {
+     "nom": "iShares MSCI South Korea ETF (EWY)",
+     "var": -0.1315,
+     "ticker": "EWY"
+    },
+    {
+     "nom": "Meta Platforms Inc. (META)",
+     "var": -0.22219999999999998,
+     "ticker": "META"
+    },
+    {
+     "nom": "Alphabet Inc. CL C (GOOG)",
+     "var": -0.4595,
+     "ticker": "GOOG"
+    },
+    {
+     "nom": "Vistra Corp. (VST)",
+     "var": -0.0451,
+     "ticker": "VST"
+    },
+    {
+     "nom": "Alibaba Group Holdings (BABA)",
+     "var": -0.075,
+     "ticker": "BABA"
+    }
+   ],
+   "vendus": []
+  },
+  {
+   "nom": "Li Lu - Himalaya Capital Management",
+   "trimestre": "",
+   "publie": "",
+   "top": [
+    {
+     "nom": "Pinduoduo Inc. (PDD)",
+     "poids": 0.24239999999999998,
+     "ticker": "PDD"
+    },
+    {
+     "nom": "Alphabet Inc. (GOOGL)",
+     "poids": 0.2314,
+     "ticker": "GOOGL"
+    },
+    {
+     "nom": "Alphabet Inc. CL C (GOOG)",
+     "poids": 0.22089999999999999,
+     "ticker": "GOOG"
+    },
+    {
+     "nom": "Berkshire Hathaway CL B (BRK.B)",
+     "poids": 0.1459,
+     "ticker": "BRK.B"
+    },
+    {
+     "nom": "East West Bancorp (EWBC)",
+     "poids": 0.091,
+     "ticker": "EWBC"
+    },
+    {
+     "nom": "Tencent Music Entertainment Grp (TME)",
+     "poids": 0.0311,
+     "ticker": "TME"
+    },
+    {
+     "nom": "Crocs Inc. (CROX)",
+     "poids": 0.0275,
+     "ticker": "CROX"
+    },
+    {
+     "nom": "Apple Inc. (AAPL)",
+     "poids": 0.0097,
+     "ticker": "AAPL"
+    }
+   ],
+   "nouveaux": [],
+   "renforces": [
+    {
+     "nom": "Pinduoduo Inc. (PDD)",
+     "var": 0.0929,
+     "ticker": "PDD"
+    },
+    {
+     "nom": "Tencent Music Entertainment Grp (TME)",
+     "var": 1.2493,
+     "ticker": "TME"
+    }
+   ],
+   "alleges": [],
+   "vendus": []
+  },
+  {
+   "nom": "Mohnish Pabrai - Pabrai Investments",
+   "trimestre": "",
+   "publie": "",
+   "top": [
+    {
+     "nom": "Warrior Met Coal Inc. (HCC)",
+     "poids": 0.4542,
+     "ticker": "HCC"
+    },
+    {
+     "nom": "Transocean Ltd. (RIG)",
+     "poids": 0.4121,
+     "ticker": "RIG"
+    },
+    {
+     "nom": "Alpha Metallurgical Resources Inc. (AMR)",
+     "poids": 0.0793,
+     "ticker": "AMR"
+    },
+    {
+     "nom": "Jsc Kaspi.kz ADR (KSPI)",
+     "poids": 0.054299999999999994,
+     "ticker": "KSPI"
+    }
+   ],
+   "nouveaux": [],
+   "renforces": [
+    {
+     "nom": "Warrior Met Coal Inc. (HCC)",
+     "var": 0.0707,
+     "ticker": "HCC"
+    },
+    {
+     "nom": "Transocean Ltd. (RIG)",
+     "var": 0.39590000000000003,
+     "ticker": "RIG"
+    },
+    {
+     "nom": "Jsc Kaspi.kz ADR (KSPI)",
+     "var": 121.9207,
+     "ticker": "KSPI"
+    }
+   ],
+   "alleges": [
+    {
+     "nom": "Alpha Metallurgical Resources Inc. (AMR)",
+     "var": -0.6698999999999999,
+     "ticker": "AMR"
+    }
+   ],
+   "vendus": []
+  },
+  {
+   "nom": "Seth Klarman - Baupost Group",
+   "trimestre": "",
+   "publie": "",
+   "top": [
+    {
+     "nom": "Amazon.com Inc. (AMZN)",
+     "poids": 0.18489999999999998,
+     "ticker": "AMZN"
+    },
+    {
+     "nom": "Elevance Health Inc. (ELV)",
+     "poids": 0.0983,
+     "ticker": "ELV"
+    },
+    {
+     "nom": "Restaurant Brands International (QSR)",
+     "poids": 0.0951,
+     "ticker": "QSR"
+    },
+    {
+     "nom": "Genuine Parts (GPC)",
+     "poids": 0.07719999999999999,
+     "ticker": "GPC"
+    },
+    {
+     "nom": "Ferguson Enterprises Inc. (FERG)",
+     "poids": 0.0693,
+     "ticker": "FERG"
+    },
+    {
+     "nom": "Alphabet Inc. CL C (GOOG)",
+     "poids": 0.0641,
+     "ticker": "GOOG"
+    },
+    {
+     "nom": "WESCO International Inc. (WCC)",
+     "poids": 0.0512,
+     "ticker": "WCC"
+    },
+    {
+     "nom": "Visa Inc. (V)",
+     "poids": 0.0499,
+     "ticker": "V"
+    },
+    {
+     "nom": "Union Pacific (UNP)",
+     "poids": 0.0429,
+     "ticker": "UNP"
+    },
+    {
+     "nom": "Aon Plc (AON)",
+     "poids": 0.037000000000000005,
+     "ticker": "AON"
+    }
+   ],
+   "nouveaux": [
+    {
+     "nom": "Honeywell Aerospace Inc (HONA)",
+     "poids": 0.0348,
+     "ticker": "HONA"
+    },
+    {
+     "nom": "SiteOne Landscape Supply Inc. (SITE)",
+     "poids": 0.0223,
+     "ticker": "SITE"
+    }
+   ],
+   "renforces": [
+    {
+     "nom": "Genuine Parts (GPC)",
+     "var": 0.1001,
+     "ticker": "GPC"
+    },
+    {
+     "nom": "Ferguson Enterprises Inc. (FERG)",
+     "var": 0.0834,
+     "ticker": "FERG"
+    },
+    {
+     "nom": "WESCO International Inc. (WCC)",
+     "var": 0.0839,
+     "ticker": "WCC"
+    },
+    {
+     "nom": "CME Group (CME)",
+     "var": 0.1073,
+     "ticker": "CME"
+    },
+    {
+     "nom": "Herbalife Nutrition Ltd. (HLF)",
+     "var": 0.10800000000000001,
+     "ticker": "HLF"
+    },
+    {
+     "nom": "Axalta Coating Systems Ltd. (AXTA)",
+     "var": 0.9665,
+     "ticker": "AXTA"
+    }
+   ],
+   "alleges": [
+    {
+     "nom": "Alphabet Inc. CL C (GOOG)",
+     "var": -0.30760000000000004,
+     "ticker": "GOOG"
+    },
+    {
+     "nom": "Union Pacific (UNP)",
+     "var": -0.32899999999999996,
+     "ticker": "UNP"
+    },
+    {
+     "nom": "Aon Plc (AON)",
+     "var": -0.0178,
+     "ticker": "AON"
+    },
+    {
+     "nom": "Molina Healthcare Inc. (MOH)",
+     "var": -0.2904,
+     "ticker": "MOH"
+    }
+   ],
+   "vendus": []
+  },
+  {
+   "nom": "Terry Smith - Fundsmith",
+   "trimestre": "",
+   "publie": "",
+   "top": [
+    {
+     "nom": "Waters Corp. (WAT)",
+     "poids": 0.0771,
+     "ticker": "WAT"
+    },
+    {
+     "nom": "Visa Inc. (V)",
+     "poids": 0.0626,
+     "ticker": "V"
+    },
+    {
+     "nom": "Mastercard Inc. (MA)",
+     "poids": 0.062400000000000004,
+     "ticker": "MA"
+    },
+    {
+     "nom": "Veeva Systems Inc. (VEEV)",
+     "poids": 0.059800000000000006,
+     "ticker": "VEEV"
+    },
+    {
+     "nom": "Stryker Corp. (SYK)",
+     "poids": 0.057,
+     "ticker": "SYK"
+    },
+    {
+     "nom": "Uber Technologies Inc. (UBER)",
+     "poids": 0.047400000000000005,
+     "ticker": "UBER"
+    },
+    {
+     "nom": "Church & Dwight (CHD)",
+     "poids": 0.047,
+     "ticker": "CHD"
+    },
+    {
+     "nom": "Fortinet Inc. (FTNT)",
+     "poids": 0.046799999999999994,
+     "ticker": "FTNT"
+    },
+    {
+     "nom": "Yum! Brands Inc. (YUM)",
+     "poids": 0.043899999999999995,
+     "ticker": "YUM"
+    },
+    {
+     "nom": "Philip Morris Intl. (PM)",
+     "poids": 0.0407,
+     "ticker": "PM"
+    }
+   ],
+   "nouveaux": [
+    {
+     "nom": "Rambus Inc. (RMBS)",
+     "poids": 0.0018,
+     "ticker": "RMBS"
+    },
+    {
+     "nom": "Credo Technology Group Holdi (CRDO)",
+     "poids": 0.0006,
+     "ticker": "CRDO"
+    }
+   ],
+   "renforces": [
+    {
+     "nom": "Visa Inc. (V)",
+     "var": 0.1149,
+     "ticker": "V"
+    },
+    {
+     "nom": "Mastercard Inc. (MA)",
+     "var": 0.1736,
+     "ticker": "MA"
+    },
+    {
+     "nom": "Veeva Systems Inc. (VEEV)",
+     "var": 2.3122,
+     "ticker": "VEEV"
+    },
+    {
+     "nom": "Yum! Brands Inc. (YUM)",
+     "var": 6.484299999999999,
+     "ticker": "YUM"
+    },
+    {
+     "nom": "TJX Companies Inc. (TJX)",
+     "var": 0.43829999999999997,
+     "ticker": "TJX"
+    },
+    {
+     "nom": "Nextracker Inc Cl A (NXT)",
+     "var": 0.467,
+     "ticker": "NXT"
+    },
+    {
+     "nom": "Applovin Corp. (APP)",
+     "var": 0.1937,
+     "ticker": "APP"
+    },
+    {
+     "nom": "Verisign Inc. (VRSN)",
+     "var": 0.2723,
+     "ticker": "VRSN"
+    }
+   ],
+   "alleges": [
+    {
+     "nom": "Waters Corp. (WAT)",
+     "var": -0.0031,
+     "ticker": "WAT"
+    },
+    {
+     "nom": "Stryker Corp. (SYK)",
+     "var": -0.0828,
+     "ticker": "SYK"
+    },
+    {
+     "nom": "Uber Technologies Inc. (UBER)",
+     "var": -0.0013,
+     "ticker": "UBER"
+    },
+    {
+     "nom": "Church & Dwight (CHD)",
+     "var": -0.0016,
+     "ticker": "CHD"
+    },
+    {
+     "nom": "Fortinet Inc. (FTNT)",
+     "var": -0.0687,
+     "ticker": "FTNT"
+    },
+    {
+     "nom": "Philip Morris Intl. (PM)",
+     "var": -0.053,
+     "ticker": "PM"
+    },
+    {
+     "nom": "Taiwan Semiconductor S.A. (TSM)",
+     "var": -0.0009,
+     "ticker": "TSM"
+    },
+    {
+     "nom": "Texas Instruments (TXN)",
+     "var": -0.0015,
+     "ticker": "TXN"
+    }
+   ],
+   "vendus": []
+  },
+  {
+   "nom": "Thomas Gayner - Markel Group",
+   "trimestre": "",
+   "publie": "",
+   "top": [
+    {
+     "nom": "Alphabet Inc. CL C (GOOG)",
+     "poids": 0.073,
+     "ticker": "GOOG"
+    },
+    {
+     "nom": "Berkshire Hathaway CL A (BRK.A)",
+     "poids": 0.06480000000000001,
+     "ticker": "BRK.A"
+    },
+    {
+     "nom": "Berkshire Hathaway CL B (BRK.B)",
+     "poids": 0.0594,
+     "ticker": "BRK.B"
+    },
+    {
+     "nom": "Deere & Co. (DE)",
+     "poids": 0.045,
+     "ticker": "DE"
+    },
+    {
+     "nom": "Amazon.com Inc. (AMZN)",
+     "poids": 0.0394,
+     "ticker": "AMZN"
+    },
+    {
+     "nom": "Brookfield Corp. (BN)",
+     "poids": 0.0371,
+     "ticker": "BN"
+    },
+    {
+     "nom": "Apple Inc. (AAPL)",
+     "poids": 0.0318,
+     "ticker": "AAPL"
+    },
+    {
+     "nom": "Analog Devices (ADI)",
+     "poids": 0.030899999999999997,
+     "ticker": "ADI"
+    },
+    {
+     "nom": "Visa Inc. (V)",
+     "poids": 0.028399999999999998,
+     "ticker": "V"
+    },
+    {
+     "nom": "Goldman Sachs Group (GS)",
+     "poids": 0.0252,
+     "ticker": "GS"
+    }
+   ],
+   "nouveaux": [
+    {
+     "nom": "Mobility Global Inc (MBGL)",
+     "poids": 0.0002,
+     "ticker": "MBGL"
+    },
+    {
+     "nom": "Zebra Technologies Corp. (ZBRA)",
+     "poids": 0.0002,
+     "ticker": "ZBRA"
+    },
+    {
+     "nom": "SiteOne Landscape Supply Inc. (SITE)",
+     "poids": 0.0001,
+     "ticker": "SITE"
+    },
+    {
+     "nom": "Silicon Laboratories Inc. (SLAB)",
+     "poids": 0.0001,
+     "ticker": "SLAB"
+    },
+    {
+     "nom": "Toast Inc. (TOST)",
+     "poids": 0.0001,
+     "ticker": "TOST"
+    },
+    {
+     "nom": "Tyler Technologies Inc. (TYL)",
+     "poids": 0.0001,
+     "ticker": "TYL"
+    },
+    {
+     "nom": "Vista Gold Corp (VGZ)",
+     "poids": 0.0001,
+     "ticker": "VGZ"
+    },
+    {
+     "nom": "Valvoline Inc. (VVV)",
+     "poids": 0.0001,
+     "ticker": "VVV"
+    }
+   ],
+   "renforces": [
+    {
+     "nom": "Home Depot (HD)",
+     "var": 0.0103,
+     "ticker": "HD"
+    },
+    {
+     "nom": "Walt Disney Co. (DIS)",
+     "var": 0.0037,
+     "ticker": "DIS"
+    },
+    {
+     "nom": "Watsco Inc. (WSO)",
+     "var": 0.042300000000000004,
+     "ticker": "WSO"
+    },
+    {
+     "nom": "Franco Nevada Corp. (FNV)",
+     "var": 0.0175,
+     "ticker": "FNV"
+    },
+    {
+     "nom": "LPL Financial Holdings Inc. (LPLA)",
+     "var": 0.011000000000000001,
+     "ticker": "LPLA"
+    },
+    {
+     "nom": "Lowe's Cos. (LOW)",
+     "var": 0.0126,
+     "ticker": "LOW"
+    },
+    {
+     "nom": "RLI Corp. (RLI)",
+     "var": 0.011399999999999999,
+     "ticker": "RLI"
+    },
+    {
+     "nom": "Linde plc (LIN)",
+     "var": 0.0232,
+     "ticker": "LIN"
+    }
+   ],
+   "alleges": [
+    {
+     "nom": "Deere & Co. (DE)",
+     "var": -0.0191,
+     "ticker": "DE"
+    },
+    {
+     "nom": "Alphabet Inc. (GOOGL)",
+     "var": -0.091,
+     "ticker": "GOOGL"
+    },
+    {
+     "nom": "Meta Platforms Inc. (META)",
+     "var": -0.10679999999999999,
+     "ticker": "META"
+    },
+    {
+     "nom": "Brookfield Asset Management (BAM)",
+     "var": -0.0091,
+     "ticker": "BAM"
+    },
+    {
+     "nom": "Costco Co. (COST)",
+     "var": -0.138,
+     "ticker": "COST"
+    },
+    {
+     "nom": "Yum! Brands Inc. (YUM)",
+     "var": -0.4207,
+     "ticker": "YUM"
+    },
+    {
+     "nom": "Airbnb Inc. (ABNB)",
+     "var": -0.6973999999999999,
+     "ticker": "ABNB"
+    },
+    {
+     "nom": "Comcast Corp. (CMCSA)",
+     "var": -0.6405,
+     "ticker": "CMCSA"
+    }
+   ],
+   "vendus": []
+  },
+  {
+   "nom": "Warren Buffett - Berkshire Hathaway",
+   "trimestre": "",
+   "publie": "",
+   "top": [
+    {
+     "nom": "Apple Inc. (AAPL)",
+     "poids": 0.2495,
+     "ticker": "AAPL"
+    },
+    {
+     "nom": "American Express (AXP)",
+     "poids": 0.1516,
+     "ticker": "AXP"
+    },
+    {
+     "nom": "Coca Cola Co. (KO)",
+     "poids": 0.11320000000000001,
+     "ticker": "KO"
+    },
+    {
+     "nom": "Alphabet Inc. (GOOGL)",
+     "poids": 0.0891,
+     "ticker": "GOOGL"
+    },
+    {
+     "nom": "Bank of America Corp. (BAC)",
+     "poids": 0.0816,
+     "ticker": "BAC"
+    },
+    {
+     "nom": "Chevron Corp. (CVX)",
+     "poids": 0.056600000000000004,
+     "ticker": "CVX"
+    },
+    {
+     "nom": "Occidental Petroleum (OXY)",
+     "poids": 0.0482,
+     "ticker": "OXY"
+    },
+    {
+     "nom": "Moody's Corp. (MCO)",
+     "poids": 0.0368,
+     "ticker": "MCO"
+    },
+    {
+     "nom": "Chubb Limited (CB)",
+     "poids": 0.0366,
+     "ticker": "CB"
+    },
+    {
+     "nom": "Alphabet Inc. CL C (GOOG)",
+     "poids": 0.0305,
+     "ticker": "GOOG"
+    }
+   ],
+   "nouveaux": [
+    {
+     "nom": "Bending Spoons Spa (BSP)",
+     "poids": 0.0023,
+     "ticker": "BSP"
+    }
+   ],
+   "renforces": [
+    {
+     "nom": "Delta Air Lines Inc. (DAL)",
+     "var": 0.1244,
+     "ticker": "DAL"
+    },
+    {
+     "nom": "Lennar Corp. (LEN)",
+     "var": 0.9856,
+     "ticker": "LEN"
+    },
+    {
+     "nom": "Macy's Inc. (M)",
+     "var": 0.026000000000000002,
+     "ticker": "M"
+    },
+    {
+     "nom": "Lennar Corp. CL B (LEN.B)",
+     "var": 0.855,
+     "ticker": "LEN.B"
+    }
+   ],
+   "alleges": [
+    {
+     "nom": "Bank of America Corp. (BAC)",
+     "var": -0.057,
+     "ticker": "BAC"
+    },
+    {
+     "nom": "DaVita HealthCare Partners (DVA)",
+     "var": -0.0063,
+     "ticker": "DVA"
+    },
+    {
+     "nom": "Kroger Co. (KR)",
+     "var": -0.1026,
+     "ticker": "KR"
+    },
+    {
+     "nom": "Verisign Inc. (VRSN)",
+     "var": -0.34119999999999995,
+     "ticker": "VRSN"
+    },
+    {
+     "nom": "Nucor Corp. (NUE)",
+     "var": -0.1491,
+     "ticker": "NUE"
+    },
+    {
+     "nom": "Capital One Financial (COF)",
+     "var": -0.6167,
+     "ticker": "COF"
+    }
+   ],
+   "vendus": []
+  }
+ ]
+}
