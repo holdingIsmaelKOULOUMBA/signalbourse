@@ -1097,9 +1097,12 @@ def construire_monde(cfg, erreurs):
             sel = json.loads(SELECTION.read_text(encoding="utf-8"))
         except Exception:
             sel = {}
-    complet = sel.get("date") != aujourd_hui or not sel.get("opportunites") or "cryptos" not in sel
+    complet = sel.get("date") != aujourd_hui or not sel.get("opportunites") or sel.get("version") != 3
     if complet:
         cand_actions = univers.get("actions", [])[:90]
+        # on garantit des candidats africains (Afrique du Sud, Égypte) même s'ils ne sont pas dans le top mondial
+        deja = {c["ticker"] for c in cand_actions}
+        cand_actions += [c for c in univers.get("actions", []) if c.get("pays") in ("Afrique du Sud", "Égypte") and c["ticker"] not in deja][:14]
         cand_etfs = univers.get("etfs", [])
         cand_pep = cfg.get("pepites", [])
     else:
@@ -1182,7 +1185,8 @@ def construire_monde(cfg, erreurs):
     for r in res_cr:
         r["score_global"] = 0.5 * r["score_pepite"] + 0.3 * r["score_lt"] + 0.2 * prelim.get(r["ticker"], 0)
     base = [r for r in res_cr if r["ticker"] in ("BTC-USD", "ETH-USD")]
-    autres = sorted([r for r in res_cr if r["ticker"] not in ("BTC-USD", "ETH-USD")], key=lambda r: -r["score_global"])[:14]
+    autres = sorted([r for r in res_cr if r["ticker"] not in ("BTC-USD", "ETH-USD") and r["score_pepite"] > 0 and r["score_lt"] > -0.1],
+                    key=lambda r: -r["score_global"])[:14]
     cryptos = base + autres
 
     # badge « Nouveau » pour les cryptos (même registre que les actions)
@@ -1199,7 +1203,7 @@ def construire_monde(cfg, erreurs):
 
     if complet:
         garder = lambda lst: [{k: r.get(k, "") for k in _CHAMPS_ENTREE} for r in lst]
-        SELECTION.write_text(json.dumps({"date": aujourd_hui, "opportunites": garder(opportunites),
+        SELECTION.write_text(json.dumps({"date": aujourd_hui, "version": 3, "opportunites": garder(opportunites),
                                          "pepites_auto": garder(pep_auto), "etfs": garder(etfs), "afrique": garder(afrique),
                                          "cryptos": [{k: r.get(k, "") for k in _CHAMPS_ENTREE} | {"score_prelim": prelim.get(r["ticker"], 0)} for r in cryptos]},
                                         ensure_ascii=False, indent=1), encoding="utf-8")

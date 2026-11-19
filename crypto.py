@@ -7,7 +7,7 @@ import urllib.request
 
 STABLES = {"usdt", "usdc", "dai", "fdusd", "tusd", "usde", "pyusd", "usdd", "busd", "usds", "frax", "gusd", "lusd",
            "usdp", "eurc", "eurs", "usd0", "susde", "usdy", "rlusd", "usdtb", "usdf", "usdg", "bfusd", "usd1", "xaut", "paxg"}
-EMBALLES = re.compile(r"^(w|st|wst|we|cb|r|m|bs|ez|os|sw|jito|b|lst)?(btc|eth|sol|bnb|avax|matic|pol)$|^(steth|weeth|reth|cbeth|wbeth|meth|ezeth|rseth|jitosol|msol|bnsol|lbtc|solvbtc|tbtc|cbbtc|wbtc|weth|clbtc)$")
+EMBALLES = re.compile(r"^(w|st|wst|we|cb|r|m|bs|ez|os|sw|jito|b|lst)(btc|eth|sol|bnb|avax|matic|pol)$|^(steth|weeth|reth|cbeth|wbeth|meth|ezeth|rseth|jitosol|msol|bnsol|lbtc|solvbtc|tbtc|cbbtc|wbtc|weth|clbtc)$")
 
 
 def log(m):
@@ -33,6 +33,8 @@ def selection(garder=18):
     for c in data:
         sym = (c.get("symbol") or "").lower()
         if sym in STABLES or EMBALLES.match(sym) or not c.get("market_cap"):
+            continue
+        if (c.get("market_cap_rank") or 999) > 180 or (c.get("total_volume") or 0) < 5e6:  # trop petite ou trop peu échangée
             continue
         rang = c.get("market_cap_rank") or 999
         vol, cap = c.get("total_volume") or 0, c.get("market_cap") or 1

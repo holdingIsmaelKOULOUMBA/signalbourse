@@ -224,8 +224,12 @@ def balayer_monde(par_region=40, garder=110):
                     scores[t] = s
             except Exception:
                 pass
-    tri = sorted(scores, key=lambda t: -scores[t])[:garder]
-    return [candidats[t] | {"score_rapide": round(scores[t], 3)} for t in tri]
+    tri = sorted(scores, key=lambda t: -scores[t])
+    garde = tri[:garder]
+    # on ajoute les meilleurs titres africains, souvent absents du top mondial
+    garde += [t for t in tri[garder:] if candidats[t]["zone"] == "Afrique & Moyen-Orient"
+              and candidats[t]["pays"] in ("Afrique du Sud", "Égypte")][:14]
+    return [candidats[t] | {"score_rapide": round(scores[t], 3)} for t in garde]
 
 
 _MOTS_ETF = r"\b(ISHARES|XTRACKERS|SPDR|STATE STREET|INVESCO|VANGUARD|AMUNDI|LYXOR|WISDOMTREE|GLOBAL X|VANECK|UCITS|ETF|FUND|USD|EUR|GBP|CHF|ACC|DIST|INC|1C|1D|2C|C|D|THE|SELECT|SECTOR|INDEX|TRUST|SHARES|CLASS|S P|MSCI)\b"
@@ -281,7 +285,7 @@ def univers_du_jour(forcer=False):
             cache = json.loads(CACHE_UNIVERS.read_text(encoding="utf-8"))
         except Exception:
             cache = {}
-    if cache.get("date") == aujourd_hui and not forcer and cache.get("actions"):
+    if cache.get("date") == aujourd_hui and not forcer and cache.get("actions") and cache.get("version") == 3:
         return cache
     actions = balayer_monde()
     etfs = etf_monde()
@@ -291,7 +295,7 @@ def univers_du_jour(forcer=False):
     premiere = cache.get("premiere_apparition", {})
     for e in actions + etfs:
         premiere.setdefault(e["ticker"], aujourd_hui)
-    cache = {"date": aujourd_hui, "actions": actions, "etfs": etfs, "premiere_apparition": premiere}
+    cache = {"date": aujourd_hui, "version": 3, "actions": actions, "etfs": etfs, "premiere_apparition": premiere}
     CACHE_UNIVERS.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
     return cache
 
