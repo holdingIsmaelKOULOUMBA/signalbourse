@@ -515,19 +515,20 @@ def envoyer_email(sujet, html_corps):
     import smtplib
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
-    hote = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+    hote = os.environ.get("SMTP_HOST") or "smtp.gmail.com"
     port = int(os.environ.get("SMTP_PORT", "587"))
     user, mdp, dest = os.environ.get("SMTP_USER"), os.environ.get("SMTP_PASSWORD"), os.environ.get("EMAIL_TO")
     if not (user and mdp and dest):
         log("e-mail non configuré (secrets SMTP_USER, SMTP_PASSWORD, EMAIL_TO) : newsletter enregistrée seulement")
         return False
     msg = MIMEMultipart("alternative")
-    msg["Subject"], msg["From"], msg["To"] = sujet, f"SignalBourse <{user}>", dest
+    expediteur = os.environ.get("SMTP_FROM") or user
+    msg["Subject"], msg["From"], msg["To"] = sujet, f"SignalBourse <{expediteur}>", dest
     msg.attach(MIMEText(html_corps, "html", "utf-8"))
     with smtplib.SMTP(hote, port, timeout=30) as s:
         s.starttls()
         s.login(user, mdp)
-        s.sendmail(user, [d.strip() for d in dest.split(",")], msg.as_string())
+        s.sendmail(expediteur, [d.strip() for d in dest.split(",")], msg.as_string())
     log(f"newsletter envoyée à {dest}")
     return True
 
