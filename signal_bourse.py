@@ -84,9 +84,18 @@ def historique(ticker, periode="5y"):
 def infos_fondamentales(ticker):
     _exiger_yf()
     try:
-        return yf.Ticker(ticker).info or {}
+        brut = yf.Ticker(ticker).info or {}
     except Exception:
         return {}
+    propre = {}
+    for k, v in brut.items():
+        if isinstance(v, str) and k not in ("currency", "longName", "shortName", "sector", "industry", "country"):
+            try:
+                v = float(v)
+            except ValueError:
+                continue  # valeur texte inattendue pour un champ numérique : ignorée
+        propre[k] = v
+    return propre
 
 
 def transactions_dirigeants(ticker):
