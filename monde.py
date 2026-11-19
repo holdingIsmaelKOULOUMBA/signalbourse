@@ -151,7 +151,8 @@ def en_dollars(montant, devise):
 
 def _screen(filtres, taille, tri, asc=False):
     try:
-        r = yf.screen(EquityQuery("and", filtres), size=taille, sortField=tri, sortAsc=asc)
+        q = filtres[0] if len(filtres) == 1 else EquityQuery("and", filtres)
+        r = yf.screen(q, size=taille, sortField=tri, sortAsc=asc)
         return r.get("quotes", []) if isinstance(r, dict) else []
     except Exception as ex:
         log(f"filtre : {ex}")
@@ -254,7 +255,8 @@ def etf_monde(garder=30):
         nom = q.get("longName") or q.get("shortName") or sym
         if re.search(r"\b(2X|3X|ULTRA|LEVERAGED|BULL|BEAR|INVERSE|SHORT|DAILY)\b", nom.upper()):
             continue
-        if sym.endswith((".MX", ".SA", ".BA", ".SN", ".LM")):  # cotations secondaires en Amérique latine
+        # on garde les ETF accessibles depuis la France : Europe (UCITS) et États-Unis
+        if "." in sym and not sym.endswith((".PA", ".AS", ".DE", ".MI", ".L", ".SW", ".BR", ".MC", ".F")):
             continue
         nom_court = re.sub(r"\s+", " ", re.sub(r"\(.*?\)|\b(Acc|Dist|1C|1D|USD|EUR)\b", "", nom)).strip().lower()
         if nom_court in vus_nom:
@@ -403,10 +405,72 @@ def grands_fonds(forcer=False):
             if "403" in str(ex) and not sortie["fonds"]:
                 log("accès SEC refusé depuis ce serveur : section « Grands fonds » reportée")
                 break
+    if not sortie["fonds"]:
+        try:
+            sortie["fonds"] = _dataroma()
+        except Exception as ex:
+            log(f"dataroma : {ex}")
     if sortie["fonds"]:
         CACHE_FONDS.write_text(json.dumps(sortie, ensure_ascii=False, indent=1), encoding="utf-8")
     elif CACHE_FONDS.exists():
         return json.loads(CACHE_FONDS.read_text(encoding="utf-8"))
+    return sortie
+
+
+DATAROMA_CIBLES = ["Buffett", "Ackman", "Tepper", "Burry", "Druckenmiller", "Terry Smith", "Li Lu", "Pabrai",
+                   "Klarman", "Greenblatt", "Akre", "Tom Russo", "Gayner", "Dalio"]
+
+
+def _dataroma():
+    """Repli gratuit : positions des « super-investisseurs » publiées par dataroma.com (même source : 13F)."""
+    ua = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36"}
+    lire = lambda u: urllib.request.urlopen(urllib.request.Request(u, headers=ua), timeout=25).read().decode("utf-8", "ignore")
+    page = lire("https://www.dataroma.com/m/managers.php")
+    gestionnaires = re.findall(r'href="/m/holdings\.php\?m=([^"&]+)"[^>]*>(.*?)</a>', page, re.S)
+    choisis, vus = [], set()
+    for code, nom in gestionnaires:
+        nom = re.sub(r"<[^>]+>|\s+", " ", nom).strip()
+        if code in vus:
+            continue
+        if any(c.lower() in nom.lower() for c in DATAROMA_CIBLES):
+            choisis.append((code, nom))
+            vus.add(code)
+    sortie = []
+    for code, nom in choisis[:12]:
+        try:
+            h = lire(f"https://www.dataroma.com/m/holdings.php?m={code}")
+            periode = re.search(r"Period:\s*([^<]+)<", h)
+            date = re.search(r"Portfolio date:\s*([^<]+)<", h)
+            lignes = []
+            for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", h, re.S):
+                cel = [re.sub(r"<[^>]+>|&nbsp;", " ", c).strip() for c in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
+                cel = [" ".join(c.split()) for c in cel]
+                if len(cel) < 4 or " - " not in cel[1]:
+                    continue
+                tick, nom_t = cel[1].split(" - ", 1)
+                try:
+                    poids = float(cel[2]) / 100
+                except ValueError:
+                    poids = 0.0
+                lignes.append({"ticker": tick.strip(), "nom": nom_t.strip(), "poids": poids, "act": cel[3]})
+            if not lignes:
+                continue
+            def var(a):
+                m = re.search(r"([\d.]+)%", a)
+                return float(m.group(1)) / 100 if m else 0.0
+            sortie.append({
+                "nom": nom, "trimestre": (periode.group(1).strip() if periode else "dernier trimestre"),
+                "publie": (date.group(1).strip() if date else "—"),
+                "top": [{"nom": f"{l['nom']} ({l['ticker']})", "poids": l["poids"], "ticker": l["ticker"]} for l in lignes[:10]],
+                "nouveaux": [{"nom": f"{l['nom']} ({l['ticker']})", "poids": l["poids"], "ticker": l["ticker"]} for l in lignes if l["act"].lower().startswith("buy")][:8],
+                "renforces": [{"nom": f"{l['nom']} ({l['ticker']})", "var": var(l["act"]), "ticker": l["ticker"]} for l in lignes if l["act"].lower().startswith("add")][:8],
+                "alleges": [{"nom": f"{l['nom']} ({l['ticker']})", "var": -var(l["act"]), "ticker": l["ticker"]} for l in lignes if l["act"].lower().startswith("reduce")][:8],
+                "vendus": [],
+            })
+            log(f"dataroma {nom} : {len(lignes)} lignes")
+            time.sleep(1)
+        except Exception as ex:
+            log(f"dataroma {nom} : {ex}")
     return sortie
 
 
@@ -421,9 +485,14 @@ def _norm(nom):
     return " ".join(n.split())
 
 
-def fonds_qui_achetent(nom_titre, fonds):
+def fonds_qui_achetent(nom_titre, fonds, ticker=""):
     """Noms des fonds qui ont ouvert ou renforcé une position sur ce titre au dernier trimestre."""
-    cle = _norm(nom_titre)
+    if ticker and "." not in ticker:
+        par_ticker = [f["nom"].split(" (")[0] for f in fonds.get("fonds", [])
+                      if any(p.get("ticker") == ticker for p in f["nouveaux"] + f["renforces"])]
+        if par_ticker:
+            return par_ticker
+    cle = _norm(re.sub(r"\(.*?\)", "", nom_titre))
     if len(cle) < 3:
         return []
     mots = cle.split()[:2]
@@ -431,7 +500,7 @@ def fonds_qui_achetent(nom_titre, fonds):
     acheteurs = []
     for f in fonds.get("fonds", []):
         for p in f["nouveaux"] + f["renforces"]:
-            pn = _norm(p["nom"])
+            pn = _norm(re.sub(r"\(.*?\)", "", p["nom"]))
             if pn and (pn.startswith(cle2) or cle2.startswith(pn)):
                 acheteurs.append(f["nom"].split(" (")[0])
                 break

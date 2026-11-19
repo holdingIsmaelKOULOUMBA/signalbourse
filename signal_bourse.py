@@ -510,6 +510,7 @@ def analyser(entree, cfg, avec_news=True):
         "ticker": ticker, "nom": nom, "type": type_titre, "prix": prix, "theme": entree.get("theme", ""),
         "pays": entree.get("pays", ""), "zone": entree.get("zone", ""), "secteur": entree.get("secteur", "") or info.get("sector", ""),
         "recherche": entree.get("recherche", ""), "code_pays": entree.get("code_pays", ""), "pays_siege": info.get("country", ""),
+        "pct_institutions": info.get("heldPercentInstitutions"),
         "score_pepite": round(pep, 3), "raisons_pepite": raisons_pep,
         "capitalisation": info.get("marketCap"),
         "devise": info.get("currency", ""), "date": str(d.index[-1].date()),
@@ -1021,7 +1022,9 @@ def construire_monde(cfg, erreurs):
     for r in filtres:
         r["cap_usd"] = monde.en_dollars(r.get("capitalisation"), r.get("devise"))
         r["nouveau"] = monde.est_nouveau(univers, r["ticker"])
-        r["fonds_acheteurs"] = monde.fonds_qui_achetent(r["nom"], fonds)
+        r["fonds_acheteurs"] = monde.fonds_qui_achetent(r["nom"], fonds, r["ticker"])
+        if r.get("pct_institutions"):
+            r["raisons_pepite"] = r["raisons_pepite"] + [f"Détenu à {r['pct_institutions']:.0%} par des investisseurs institutionnels (fonds, assureurs, banques)"]
         bonus = 0.08 * min(len(r["fonds_acheteurs"]), 2)
         r["score_global"] = 0.45 * r["score_lt"] + 0.45 * r["score_pepite"] + 0.10 * r["score_ct"] + bonus
         if r["fonds_acheteurs"]:
@@ -1029,13 +1032,27 @@ def construire_monde(cfg, erreurs):
         (moyennes if (r["cap_usd"] or 0) and r["cap_usd"] < 10e9 else grandes).append(r)
     grandes.sort(key=lambda r: -r["score_global"])
     moyennes.sort(key=lambda r: -r["score_global"])
-    opportunites = [r for r in grandes if r["score_lt"] > -0.1][:30]
-    pep_auto = [r for r in moyennes if r["score_lt"] > -0.1][:10]
+    def diversifier(liste, maxi, par_pays, par_pays_secteur):
+        sortie, n_pays, n_ps = [], {}, {}
+        for r in liste:
+            if r["score_lt"] <= -0.1:
+                continue
+            p, ps = r.get("pays", ""), (r.get("pays", ""), r.get("secteur", ""))
+            if n_pays.get(p, 0) >= par_pays or n_ps.get(ps, 0) >= par_pays_secteur:
+                continue
+            n_pays[p] = n_pays.get(p, 0) + 1
+            n_ps[ps] = n_ps.get(ps, 0) + 1
+            sortie.append(r)
+            if len(sortie) >= maxi:
+                break
+        return sortie
+    opportunites = diversifier(grandes, 30, 5, 2)
+    pep_auto = diversifier(moyennes, 10, 2, 1)
 
     res_pep, err = analyser_liste(cand_pep, cfg, avec_news=False, silencieux=True)
     erreurs += err
     for r in res_pep:
-        r["fonds_acheteurs"] = monde.fonds_qui_achetent(r["nom"], fonds)
+        r["fonds_acheteurs"] = monde.fonds_qui_achetent(r["nom"], fonds, r["ticker"])
     vus, pepites = set(), []
     for r in sorted(res_pep + pep_auto, key=lambda r: -r["score_pepite"]):
         if r["ticker"] not in vus:
