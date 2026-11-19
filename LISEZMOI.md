@@ -3,8 +3,26 @@
 Adresse : **https://holdingismaelkouloumba.github.io/signalbourse/** (protégée par mot de passe une fois le secret `SITE_PASSWORD` créé).
 
 ## Ce que contient le tableau de bord
-| Onglet | Contenu | Mise à jour |
-|---|---|---|
+| Onglet | Contenu |
+|---|---|
+| **🏠 Accueil** | Résumé du jour en quelques phrases, alertes, actualité des marchés, calendrier des 3 prochaines semaines, top du jour |
+| **💼 Mon portefeuille** | Tes vraies lignes (secret `PORTEFEUILLE`) : gains, répartition, conseils de rééquilibrage, alertes |
+| **📋 Ma liste** | Tes titres suivis |
+| **🌍 Opportunités monde** | Grandes entreprises de 30 pays choisies pour leur potentiel de croissance à venir. Filtres : zone, secteur, PEA, dividende, tri |
+| **💎 Pépites** | Entreprises moyennes à fort potentiel, détectées dans le monde entier |
+| **🪙 Crypto** | Bitcoin, ether et une sélection automatique parmi les 180 premières cryptos |
+| **🌍 Afrique** | BRVM (Abidjan) jour par jour, meilleures actions d'Afrique du Sud et d'Égypte, devises africaines |
+| **🛢️ Matières & devises** | Or, pétrole, cuivre, cacao, café… et les principales devises |
+| **🏦 Grands investisseurs** | Achats et ventes de Buffett, Ackman, Tepper, Klarman, Terry Smith… |
+| **📊 Bulletin de notes** | Les signaux passés ont-ils eu raison ? Plus une simulation sur 5 ans |
+
+Chaque carte mène à une **fiche complète** : graphique sur 2 ans, raisons du potentiel, santé de l'entreprise, bilan sur plusieurs années, principaux investisseurs, prochains événements, actualités et historique des signaux.
+
+Les listes (opportunités, pépites, ETF, cryptos) se renouvellent seules chaque jour. Les cours et les signaux sont mis à jour toutes les heures de 7h à 22h en semaine, et une fois par jour le week-end. Newsletters : lundi 7h40 et vendredi 18h10. Les fichiers de données du dépôt sont chiffrés avec ton mot de passe.
+
+**Installer comme une appli sur ton téléphone** : ouvre le site, puis Partager > « Sur l'écran d'accueil » (iPhone) ou ⋮ > « Ajouter à l'écran d'accueil » (Android).
+
+---|---|---|
 | **Ma liste** | Tes ETF, obligations et actions : signal court terme et signal long terme, stop, objectif, quantité max | Toutes les heures |
 | **🌍 Opportunités monde** | Moyennes et grandes capitalisations de 30 pays (Amériques, Europe, Asie, Afrique du Sud, Égypte, Golfe…) avec une forte perspective de croissance, plus les ETF mondiaux les plus dynamiques. Badge 🆕 pour les nouvelles entrées, 🏦 quand un grand fonds vient d'acheter le titre | **Liste renouvelée chaque jour**, cours toutes les heures |
 | **💎 Pépites** | Petites et moyennes valeurs plus risquées : ta liste perso plus celles détectées automatiquement | Chaque jour / chaque heure |
@@ -29,6 +47,7 @@ Pour les créer : **github.com/holdingIsmaelKOULOUMBA/signalbourse/settings/secr
 | `EMAIL_TO` | L'adresse qui reçoit les newsletters (peut être la même) | Destinataire |
 | `TELEGRAM_BOT_TOKEN` | Le token donné par @BotFather | Alertes sur ton téléphone |
 | `TELEGRAM_CHAT_ID` | Ton Id donné par @userinfobot | Alertes sur ton téléphone |
+| `PORTEFEUILLE` | Tes positions, une par ligne : `TICKER;QUANTITÉ;PRIX D'ACHAT` (exemple : `CW8.PA;3;512.40`), plus `LIQUIDITES;1500` si tu veux | Onglet « Mon portefeuille » et alertes sur tes lignes |
 
 **Créer le mot de passe d'application Gmail (gratuit)**
 1. Active la validation en deux étapes sur ton compte Google : myaccount.google.com > Sécurité.
